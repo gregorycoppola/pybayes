@@ -51,11 +51,13 @@ def test_constant():
 
 def test_variable():
     person = Type("PERSON")
-    v1 = Variable(person)
-    v2 = Variable(person)
-    v3 = Variable(Type("COUNTRY"))
+    v1 = Variable(person, "x")
+    v2 = Variable(person, "x")
+    v3 = Variable(person, "y")
+    v4 = Variable(Type("COUNTRY"), "x")
     assert v1 == v2
     assert v1 != v3
+    assert v1 != v4
 
 
 # === Tier 3: Predicates ===
@@ -81,7 +83,7 @@ def test_predicate_not_grounded():
     subj = RoleLabel("SUBJ")
     dobj = RoleLabel("DOBJ")
     
-    x_person = Variable(person)
+    x_person = Variable(person, "x")
     c_jill = Constant(Entity("jill"), person)
     
     pred = Predicate("LIKE", (
@@ -110,7 +112,7 @@ def test_predicate_variables():
     subj = RoleLabel("SUBJ")
     dobj = RoleLabel("DOBJ")
     
-    x_person = Variable(person)
+    x_person = Variable(person, "x")
     c_jill = Constant(Entity("jill"), person)
     
     pred = Predicate("LIKE", (
@@ -128,7 +130,7 @@ def test_substitute_single_variable():
     subj = RoleLabel("SUBJ")
     dobj = RoleLabel("DOBJ")
     
-    x_person = Variable(person)
+    x_person = Variable(person, "x")
     c_jack = Constant(Entity("jack"), person)
     c_jill = Constant(Entity("jill"), person)
     
@@ -152,8 +154,8 @@ def test_substitute_multiple_variables():
     subj = RoleLabel("SUBJ")
     dobj = RoleLabel("DOBJ")
     
-    x_subj = Variable(person)
-    x_dobj = Variable(person)
+    x_subj = Variable(person, "subj")
+    x_dobj = Variable(person, "dobj")
     c_jack = Constant(Entity("jack"), person)
     c_jill = Constant(Entity("jill"), person)
     
@@ -172,7 +174,7 @@ def test_substitute_produces_grounded():
     person = Type("PERSON")
     subj = RoleLabel("SUBJ")
     
-    x_person = Variable(person)
+    x_person = Variable(person, "x")
     c_jack = Constant(Entity("jack"), person)
     
     pred = Predicate("LIKE", ((subj, x_person),))
@@ -186,8 +188,8 @@ def test_substitute_partial():
     subj = RoleLabel("SUBJ")
     dobj = RoleLabel("DOBJ")
     
-    x_subj = Variable(person)
-    x_dobj = Variable(person)
+    x_subj = Variable(person, "subj")
+    x_dobj = Variable(person, "dobj")
     c_jack = Constant(Entity("jack"), person)
     
     pred = Predicate("LIKE", (
@@ -215,7 +217,7 @@ def test_proposition_valid():
 def test_proposition_invalid():
     person = Type("PERSON")
     subj = RoleLabel("SUBJ")
-    x_person = Variable(person)
+    x_person = Variable(person, "x")
     
     pred = Predicate("LIKE", ((subj, x_person),))
     
