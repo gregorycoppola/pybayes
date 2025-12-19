@@ -10,6 +10,7 @@ from dataclasses import asdict
 import redis
 
 from qbbn.core.tokenize import tokenize, Token, SpellCorrector, CorrectedToken
+from qbbn.core.state import get_namespace
 
 
 def generate_id() -> str:
@@ -17,10 +18,13 @@ def generate_id() -> str:
 
 
 class Pipeline:
-    def __init__(self, client: redis.Redis, namespace: str = "default"):
+    def __init__(self, client: redis.Redis):
         self.client = client
-        self.namespace = namespace
         self._corrector = None
+
+    @property
+    def namespace(self) -> str:
+        return get_namespace(self.client)
 
     @property
     def corrector(self) -> SpellCorrector:
@@ -32,7 +36,6 @@ class Pipeline:
         return f"{self.namespace}:example:{example_id}:{stage}"
 
     def add(self, text: str) -> str:
-        """Add raw text, return UUID."""
         example_id = generate_id()
         self.client.set(self._key(example_id, "raw"), text)
         return example_id
