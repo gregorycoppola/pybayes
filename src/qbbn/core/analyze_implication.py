@@ -4,9 +4,8 @@ Analyze a sentence to detect if it's an implication.
 """
 
 import json
+from dataclasses import dataclass
 from openai import OpenAI
-
-from qbbn.core.analysis import SentenceAnalysis
 
 
 SYSTEM_PROMPT = """You are a logical structure analyzer.
@@ -55,9 +54,6 @@ class ImplicationStructure:
     consequent_start: int
     consequent_end: int
     coreferences: list[tuple[int, int]]  # (antecedent_idx, consequent_idx)
-
-
-from dataclasses import dataclass
 
 
 def analyze_implication(
