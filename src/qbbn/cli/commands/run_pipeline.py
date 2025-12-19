@@ -10,11 +10,12 @@ import sys
 def add_subparser(subparsers):
     parser = subparsers.add_parser(
         "run-pipeline",
-        help="Run full pipeline: add-text → tokenize → correct → segment → wsd → analyze"
+        help="Run full pipeline: add-text → tokenize → correct → segment → wsd → analyze → translate"
     )
     parser.add_argument("text", help="The text to process.")
     parser.add_argument("--db", type=int, default=0)
     parser.add_argument("--skip-wsd", action="store_true", help="Skip WSD step")
+    parser.add_argument("--skip-translate", action="store_true", help="Skip translate step")
     parser.set_defaults(func=run)
 
 
@@ -77,6 +78,14 @@ def run(args):
     if out is None:
         return
     print(out)
+    
+    # Step 7: translate (optional)
+    if not args.skip_translate:
+        print(f"\n=== translate ===")
+        out = call(["translate", example_id] + db_args)
+        if out is None:
+            return
+        print(out)
     
     # Final summary
     print(f"\n=== done ===")
