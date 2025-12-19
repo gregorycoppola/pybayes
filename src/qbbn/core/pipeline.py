@@ -1,6 +1,6 @@
 # src/qbbn/core/pipeline.py
 """
-Pipeline for processing examples through tokenization, correction, WSD.
+Pipeline for processing examples.
 """
 
 import json
@@ -11,7 +11,7 @@ import redis
 
 from qbbn.core.tokenize import tokenize, Token, SpellCorrector, CorrectedToken
 from qbbn.core.state import get_namespace
-from qbbn.core.analysis import SentenceAnalysis
+from qbbn.core.analysis import SentenceAnalysis, TextAnalysis
 
 
 def generate_id() -> str:
@@ -90,14 +90,23 @@ class Pipeline:
             return None
         return json.loads(data.decode())
 
-    def store_analysis(self, example_id: str, analysis: SentenceAnalysis) -> None:
+    def store_segments(self, example_id: str, segments: list[tuple[int, int]]) -> None:
+        self.client.set(self._key(example_id, "segments"), json.dumps(segments))
+
+    def get_segments(self, example_id: str) -> list[tuple[int, int]] | None:
+        data = self.client.get(self._key(example_id, "segments"))
+        if data is None:
+            return None
+        return [tuple(s) for s in json.loads(data.decode())]
+
+    def store_text_analysis(self, example_id: str, analysis: TextAnalysis) -> None:
         self.client.set(self._key(example_id, "analysis"), json.dumps(analysis.to_dict()))
 
-    def get_analysis(self, example_id: str) -> SentenceAnalysis | None:
+    def get_text_analysis(self, example_id: str) -> TextAnalysis | None:
         data = self.client.get(self._key(example_id, "analysis"))
         if data is None:
             return None
-        return SentenceAnalysis.from_dict(json.loads(data.decode()))
+        return TextAnalysis.from_dict(json.loads(data.decode()))
 
     def show(self, example_id: str) -> dict:
         return {
@@ -106,5 +115,6 @@ class Pipeline:
             "tokens": self.get_tokens(example_id),
             "corrected": self.get_corrected(example_id),
             "senses": self.get_senses(example_id),
-            "analysis": self.get_analysis(example_id),
+            "segments": self.get_segments(example_id),
+            "analysis": self.get_text_analysis(example_id),
         }
