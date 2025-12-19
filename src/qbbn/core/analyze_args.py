@@ -33,13 +33,13 @@ Reply with JSON only:
 """
 
 
-def build_prompt(tokens: list[str], verb_index: int) -> str:
+def build_prompt(tokens: list[str], verb_index_rel: int) -> str:
     numbered = [f"{i}: {t}" for i, t in enumerate(tokens)]
     lines = [
         "Tokens:",
         *numbered,
         "",
-        f"Main verb: {tokens[verb_index]} (index {verb_index})",
+        f"Main verb: {tokens[verb_index_rel]} (index {verb_index_rel})",
     ]
     return "\n".join(lines)
 
@@ -52,13 +52,25 @@ def analyze_args(
 ) -> SentenceAnalysis:
     """
     Fill in arguments on an existing SentenceAnalysis.
-    If recursive=True, will recursively analyze S-type arguments.
+    
+    Args:
+        tokens: The tokens for this sentence (a slice)
+        analysis: Existing analysis with verb info (indices are ABSOLUTE)
+        client: OpenAI client
+        recursive: Whether to recursively analyze S-type arguments
+    
+    Returns analysis with arguments filled in (all indices ABSOLUTE).
     """
     if analysis.verb_index is None:
         raise ValueError("No verb_index set, run analyze_verb first")
     
     client = client or OpenAI()
-    prompt = build_prompt(tokens, analysis.verb_index)
+    
+    # Convert absolute verb_index to relative for the prompt
+    offset = analysis.start
+    verb_index_rel = analysis.verb_index - offset
+    
+    prompt = build_prompt(tokens, verb_index_rel)
     
     response = client.chat.completions.create(
         model="gpt-4o-mini",
@@ -74,20 +86,27 @@ def analyze_args(
     arguments = []
     for a in result.get("arguments", []):
         arg_type = ArgType(a["arg_type"])
+        
+        # Convert relative indices to absolute
+        arg_start_abs = a["start"] + offset
+        arg_end_abs = a["end"] + offset
+        
         nested = None
         
         # Recursive analysis for sentence arguments
         if recursive and arg_type == ArgType.S:
+            # Get the nested tokens (use relative indices on the current tokens slice)
             nested_tokens = tokens[a["start"]:a["end"]]
             if nested_tokens:
                 from qbbn.core.analyze_verb import analyze_verb
-                nested = analyze_verb(nested_tokens, a["start"], a["end"], client)
+                # Pass absolute offset for the nested analysis
+                nested = analyze_verb(nested_tokens, arg_start_abs, client)
                 nested = analyze_args(nested_tokens, nested, client, recursive=True)
         
         arguments.append(Argument(
             role=a["role"],
-            start=a["start"],
-            end=a["end"],
+            start=arg_start_abs,
+            end=arg_end_abs,
             arg_type=arg_type,
             nested=nested,
         ))
