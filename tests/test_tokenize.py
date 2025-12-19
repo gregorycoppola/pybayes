@@ -14,8 +14,7 @@ def test_tokenize_simple():
     assert len(tokens) == 5
     assert tokens[0] == Token("I", 0)
     assert tokens[1] == Token("went", 2)
-    assert tokens[4] == Token("bank", 15)
-
+    assert tokens[4] == Token("bank", 14)
 
 def test_tokenize_with_punctuation():
     tokens = tokenize("Hello, world!")
