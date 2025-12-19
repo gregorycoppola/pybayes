@@ -11,6 +11,7 @@ import redis
 
 from qbbn.core.tokenize import tokenize, Token, SpellCorrector, CorrectedToken
 from qbbn.core.state import get_namespace
+from qbbn.core.analysis import SentenceAnalysis
 
 
 def generate_id() -> str:
@@ -89,6 +90,15 @@ class Pipeline:
             return None
         return json.loads(data.decode())
 
+    def store_analysis(self, example_id: str, analysis: SentenceAnalysis) -> None:
+        self.client.set(self._key(example_id, "analysis"), json.dumps(analysis.to_dict()))
+
+    def get_analysis(self, example_id: str) -> SentenceAnalysis | None:
+        data = self.client.get(self._key(example_id, "analysis"))
+        if data is None:
+            return None
+        return SentenceAnalysis.from_dict(json.loads(data.decode()))
+
     def show(self, example_id: str) -> dict:
         return {
             "id": example_id,
@@ -96,4 +106,5 @@ class Pipeline:
             "tokens": self.get_tokens(example_id),
             "corrected": self.get_corrected(example_id),
             "senses": self.get_senses(example_id),
+            "analysis": self.get_analysis(example_id),
         }
