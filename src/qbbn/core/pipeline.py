@@ -129,5 +129,5 @@ class Pipeline:
             "senses": self.get_senses(example_id),
             "segments": self.get_segments(example_id),
             "analysis": self.get_text_analysis(example_id),
+            "predicates": self.get_predicates(example_id),
         }
-
