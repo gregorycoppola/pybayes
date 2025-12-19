@@ -1,10 +1,13 @@
 # tests/test_logic.py
 """Tests for core logical primitives."""
 
+import pytest
+
 from qbbn.core.logic import (
     Type, RoleLabel, Entity,
     Constant, Variable,
     Predicate,
+    proposition,
 )
 
 
@@ -100,3 +103,121 @@ def test_predicate_equality():
     
     assert p1 == p2
     assert p1 != p3
+
+
+def test_predicate_variables():
+    person = Type("PERSON")
+    subj = RoleLabel("SUBJ")
+    dobj = RoleLabel("DOBJ")
+    
+    x_person = Variable(person)
+    c_jill = Constant(Entity("jill"), person)
+    
+    pred = Predicate("LIKE", (
+        (subj, x_person),
+        (dobj, c_jill),
+    ))
+    
+    assert pred.variables == frozenset({x_person})
+
+
+# === Tier 4: Substitution and Proposition ===
+
+def test_substitute_single_variable():
+    person = Type("PERSON")
+    subj = RoleLabel("SUBJ")
+    dobj = RoleLabel("DOBJ")
+    
+    x_person = Variable(person)
+    c_jack = Constant(Entity("jack"), person)
+    c_jill = Constant(Entity("jill"), person)
+    
+    pred = Predicate("LIKE", (
+        (subj, x_person),
+        (dobj, c_jill),
+    ))
+    
+    grounded = pred.substitute({x_person: c_jack})
+    
+    expected = Predicate("LIKE", (
+        (subj, c_jack),
+        (dobj, c_jill),
+    ))
+    
+    assert grounded == expected
+
+
+def test_substitute_multiple_variables():
+    person = Type("PERSON")
+    subj = RoleLabel("SUBJ")
+    dobj = RoleLabel("DOBJ")
+    
+    x_subj = Variable(person)
+    x_dobj = Variable(person)
+    c_jack = Constant(Entity("jack"), person)
+    c_jill = Constant(Entity("jill"), person)
+    
+    pred = Predicate("LIKE", (
+        (subj, x_subj),
+        (dobj, x_dobj),
+    ))
+    
+    grounded = pred.substitute({x_subj: c_jack, x_dobj: c_jill})
+    
+    assert grounded.is_grounded
+    assert grounded.roles == ((subj, c_jack), (dobj, c_jill))
+
+
+def test_substitute_produces_grounded():
+    person = Type("PERSON")
+    subj = RoleLabel("SUBJ")
+    
+    x_person = Variable(person)
+    c_jack = Constant(Entity("jack"), person)
+    
+    pred = Predicate("LIKE", ((subj, x_person),))
+    grounded = pred.substitute({x_person: c_jack})
+    
+    assert grounded.is_grounded
+
+
+def test_substitute_partial():
+    person = Type("PERSON")
+    subj = RoleLabel("SUBJ")
+    dobj = RoleLabel("DOBJ")
+    
+    x_subj = Variable(person)
+    x_dobj = Variable(person)
+    c_jack = Constant(Entity("jack"), person)
+    
+    pred = Predicate("LIKE", (
+        (subj, x_subj),
+        (dobj, x_dobj),
+    ))
+    
+    partial = pred.substitute({x_subj: c_jack})
+    
+    assert not partial.is_grounded
+    assert partial.variables == frozenset({x_dobj})
+
+
+def test_proposition_valid():
+    person = Type("PERSON")
+    subj = RoleLabel("SUBJ")
+    c_jack = Constant(Entity("jack"), person)
+    
+    pred = Predicate("LIKE", ((subj, c_jack),))
+    prop = proposition(pred)
+    
+    assert prop == pred
+
+
+def test_proposition_invalid():
+    person = Type("PERSON")
+    subj = RoleLabel("SUBJ")
+    x_person = Variable(person)
+    
+    pred = Predicate("LIKE", ((subj, x_person),))
+    
+    with pytest.raises(ValueError, match="unbound variables"):
+        proposition(pred)
