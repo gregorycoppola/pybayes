@@ -11,6 +11,13 @@ SYSTEM_PROMPT = """You are a sentence segmenter.
 
 Given a text with numbered tokens, identify where each sentence begins and ends.
 
+Important rules:
+- "If X then Y" is ONE sentence, not two
+- "When X, Y" is ONE sentence
+- Sentences end at periods, question marks, or exclamation marks
+- If there's no punctuation, the whole text is one sentence
+- Include ALL tokens - don't cut off the last word
+
 Reply with JSON:
 {
   "sentences": [
@@ -20,12 +27,19 @@ Reply with JSON:
 }
 
 Token indices are 0-based. End is exclusive (like Python slices).
+For example, if there are 9 tokens (indices 0-8), a single sentence covering all would be {"start": 0, "end": 9}.
 """
 
 
 def build_prompt(tokens: list[str]) -> str:
     numbered = [f"{i}: {t}" for i, t in enumerate(tokens)]
-    return "Tokens:\n" + "\n".join(numbered)
+    lines = [
+        "Tokens:",
+        *numbered,
+        "",
+        f"Total tokens: {len(tokens)}",
+    ]
+    return "\n".join(lines)
 
 
 def segment_sentences(
@@ -49,4 +63,15 @@ def segment_sentences(
     
     result = json.loads(response.choices[0].message.content)
     
-    return [(s["start"], s["end"]) for s in result.get("sentences", [])]
+    sentences = [(s["start"], s["end"]) for s in result.get("sentences", [])]
+    
+    # Safety check: if last sentence doesn't reach the end, extend it
+    if sentences and sentences[-1][1] < len(tokens):
+        start, _ = sentences[-1]
+        sentences[-1] = (start, len(tokens))
+    
+    # If no sentences detected, treat whole thing as one
+    if not sentences:
+        sentences = [(0, len(tokens))]
+    
+    return sentences
