@@ -108,6 +108,18 @@ class Pipeline:
             return None
         return TextAnalysis.from_dict(json.loads(data.decode()))
 
+    def store_predicates(self, example_id: str, predicates: list) -> None:
+        from qbbn.core.logic import Predicate
+        data = [p.to_dict() for p in predicates]
+        self.client.set(self._key(example_id, "predicates"), json.dumps(data))
+
+    def get_predicates(self, example_id: str) -> list | None:
+        from qbbn.core.logic import Predicate
+        data = self.client.get(self._key(example_id, "predicates"))
+        if data is None:
+            return None
+        return [Predicate.from_dict(d) for d in json.loads(data.decode())]
+
     def show(self, example_id: str) -> dict:
         return {
             "id": example_id,
@@ -118,3 +130,4 @@ class Pipeline:
             "segments": self.get_segments(example_id),
             "analysis": self.get_text_analysis(example_id),
         }
+
