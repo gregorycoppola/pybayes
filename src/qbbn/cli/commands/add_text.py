@@ -14,12 +14,7 @@ def add_subparser(subparsers):
         help="Add raw text to the pipeline, returns UUID."
     )
     parser.add_argument("text", help="The text to add.")
-    parser.add_argument(
-        "--db", 
-        type=int, 
-        default=0, 
-        help="Redis DB number (default: 0)"
-    )
+    parser.add_argument("--db", type=int, default=0)
     parser.set_defaults(func=run)
 
 
