@@ -48,3 +48,19 @@ def run(args):
         print("\nSenses:")
         for s in data["senses"]:
             print(f"  {s}")
+    
+    if data["analysis"]:
+        a = data["analysis"]
+        tokens = [c.corrected for c in data["corrected"]]
+        
+        print("\nAnalysis:")
+        if a.verb_index is not None:
+            print(f"  verb: {tokens[a.verb_index]} ({a.tense} {a.aspect} {a.mood})")
+            if a.negated:
+                print("  negated: yes")
+        
+        if a.arguments:
+            print("  arguments:")
+            for arg in a.arguments:
+                span = " ".join(tokens[arg.start:arg.end])
+                print(f"    {arg.role}: {span} ({arg.arg_type})")
