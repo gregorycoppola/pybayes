@@ -40,6 +40,7 @@ class Constant:
 @dataclass(frozen=True)
 class Variable:
     type: Type
+    name: str  # distinguishes variables of same type
 
 
 Argument = Union[Constant, Variable]
