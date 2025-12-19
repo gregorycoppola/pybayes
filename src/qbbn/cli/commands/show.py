@@ -43,3 +43,8 @@ def run(args):
                 print(f"  {c.original} → {c.corrected}")
             else:
                 print(f"  {c.corrected}")
+    
+    if data["senses"]:
+        print("\nSenses:")
+        for s in data["senses"]:
+            print(f"  {s}")
