@@ -1,5 +1,5 @@
 """
-Run commands - create and process annotation runs.
+Run commands.
 """
 
 import sys
@@ -13,12 +13,12 @@ def add_subparser(subparsers):
     # create
     create_p = run_sub.add_parser("create", help="Create a new run")
     create_p.add_argument("doc_id", help="Document ID")
-    create_p.add_argument("--kb", default="kb", help="KB directory path")
+    create_p.add_argument("kb_id", help="Knowledge Base ID")
     create_p.add_argument("--from", dest="parent", help="Branch from existing run")
     create_p.set_defaults(func=run_create)
     
     # process
-    proc_p = run_sub.add_parser("process", help="Process a run (run all layers)")
+    proc_p = run_sub.add_parser("process", help="Process a run")
     proc_p.add_argument("run_id", help="Run ID")
     proc_p.add_argument("--layers", nargs="+", help="Specific layers to run")
     proc_p.set_defaults(func=run_process)
@@ -42,10 +42,10 @@ def add_subparser(subparsers):
 
 def run_create(args):
     try:
-        result = client.create_run(args.doc_id, args.kb, args.parent)
+        result = client.create_run(args.doc_id, args.kb_id, args.parent)
         print(f"✓ Created run: {result['id']}")
         print(f"  doc: {result['doc_id']}")
-        print(f"  kb: {result['kb_path']}")
+        print(f"  kb: {result['kb_id']}")
         if result.get('parent_run_id'):
             print(f"  branched from: {result['parent_run_id']}")
     except Exception as e:
@@ -71,7 +71,7 @@ def run_show(args):
         run = client.get_run(args.run_id)
         print(f"Run: {run['id']}")
         print(f"Doc: {run['doc_id']}")
-        print(f"KB: {run['kb_path']}")
+        print(f"KB: {run['kb_id']} ({run.get('kb_name', '?')})")
         if run.get('parent_run_id'):
             print(f"Parent: {run['parent_run_id']}")
         print(f"Created: {run['created_at']}")
@@ -94,7 +94,7 @@ def run_list(args):
             return
         for r in runs:
             parent = f" (from {r['parent_run_id'][:8]})" if r.get('parent_run_id') else ""
-            print(f"{r['id']}  kb:{r['kb_path']}{parent}  {r['created_at'][:19]}")
+            print(f"{r['id']}  kb:{r['kb_id']}{parent}  {r['created_at'][:19]}")
     except Exception as e:
         print(f"✗ Error: {e}")
         sys.exit(1)
