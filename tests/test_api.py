@@ -1,6 +1,6 @@
 """
 Integration tests for QBBN API.
-Requires server running: uv run uvicorn qbbn.server.main:app --port 8000
+Requires server running: uv run uvicorn world.server.main:app --port 8000
 """
 
 import pytest

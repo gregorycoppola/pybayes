@@ -3,7 +3,7 @@
 
 import pytest
 
-from qbbn.core.tokenize import tokenize, Token, SpellCorrector, CorrectedToken
+from world.core.tokenize import tokenize, Token, SpellCorrector, CorrectedToken
 
 
 # === Tokenizer tests (no LLM) ===

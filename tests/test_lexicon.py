@@ -4,7 +4,7 @@
 import pytest
 import redis
 
-from qbbn.core.lexicon import Lexicon, Sense
+from world.core.lexicon import Lexicon, Sense
 
 
 @pytest.fixture
