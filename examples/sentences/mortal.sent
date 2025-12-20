@@ -1,0 +1,17 @@
+# examples/sentences/mortal.sent
+
+tokens: If someone is a man then they are mortal
+
+clause [1:5] antecedent:
+  verb: is [2]
+  agent: someone [1:2]
+  theme: a man [3:5]
+
+clause [6:9] consequent:
+  verb: are [7]
+  agent: they [6:7]
+  theme: mortal [8:9]
+
+skip: 0 5
+
+coref: 1 6
