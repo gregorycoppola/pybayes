@@ -1,0 +1,17 @@
+# examples/chain.logic
+
+# Simple chain from Figure 6
+# α₁ → α₂ → α₃
+
+entity a : node
+
+# We need 3 separate propositions to form a chain
+# Using a hack: different predicates
+alpha1(theme: a)
+# alpha2 and alpha3 start unknown
+
+rule []: alpha1(theme: a) -> alpha2(theme: a) [0.8]
+rule []: alpha2(theme: a) -> alpha3(theme: a) [0.8]
+
+? alpha2(theme: a)
+? alpha3(theme: a)
