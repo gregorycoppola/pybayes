@@ -1,0 +1,13 @@
+tokens: I think that you love her
+
+clause [0:6] main:
+  verb: think [1]
+  agent: I [0:1]
+  theme: that you love her [2:6]
+
+clause [3:6] embedded:
+  verb: love [4]
+  agent: you [3:4]
+  theme: her [5:6]
+
+skip: 2
