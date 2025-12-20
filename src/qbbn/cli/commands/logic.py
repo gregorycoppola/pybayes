@@ -7,7 +7,8 @@ import redis
 from pathlib import Path
 
 from qbbn.core.document import DocumentStore
-from qbbn.core.logical_lang import parse_logical, format_document, ParseError
+from qbbn.core.logical_lang import parse_logical, format_document, format_predicate, ParseError
+from qbbn.core.horn import KnowledgeBase, format_horn_clause
 
 
 def add_subparser(subparsers):
@@ -17,6 +18,7 @@ def add_subparser(subparsers):
     # parse - parse a .logic file
     parse_p = logic_sub.add_parser("parse", help="Parse a .logic file")
     parse_p.add_argument("file", help="Path to .logic file")
+    parse_p.add_argument("--ground", action="store_true", help="Show grounded clauses")
     parse_p.set_defaults(func=logic_parse)
     
     # load - parse and store as a logical document
@@ -52,6 +54,14 @@ def logic_parse(args):
         print(f"Rules: {len(doc.rules)}")
         print(f"Queries: {len(doc.queries)}")
         
+        if args.ground:
+            kb = KnowledgeBase.from_logical_document(doc)
+            grounded = kb.ground_all()
+            
+            print(f"\n=== Grounded ({len(grounded)} clauses) ===")
+            for clause in grounded:
+                print(f"  {format_horn_clause(clause, show_vars=False)}")
+        
     except FileNotFoundError as e:
         print(e)
     except ParseError as e:
@@ -66,15 +76,13 @@ def logic_load(args):
         client = redis.Redis(host="localhost", port=6379, db=args.db)
         store = DocumentStore(client)
         
-        # Store with filename as reference
         doc_id = store.add(text)
         
-        # Store parsed components
         store.set_data(doc_id, "source-file", args.file)
         store.set_data(doc_id, "logical-parsed", {
             "entities": {k: {"entity": v.entity.id, "type": v.type.name} for k, v in doc.entities.items()},
             "propositions": [p.to_dict() for p in doc.propositions],
-            "rules": [r.to_dict() for r in doc.rules],
+            "rules": [{"premises": [p.to_dict() for p in r.premises], "conclusion": r.conclusion.to_dict(), "variables": [{"name": v.name, "type": v.type.name} for v in r.variables]} for r in doc.rules],
             "queries": [q.to_dict() for q in doc.queries],
         })
         
@@ -93,20 +101,18 @@ def logic_load(args):
 
 def logic_example(args):
     example = """# Example .logic file syntax
-# Save this as example.logic
 
 # Declare entities with their types
 entity socrates : person
 entity plato : person
-entity athens : place
 
 # State facts (grounded propositions)
 man(theme: socrates)
-philosopher(theme: socrates)
-in(theme: socrates, location: athens)
+man(theme: plato)
 
-# Define rules (implications with variables)
+# Define rules with conjunctions
 rule [x:person]: man(theme: x) -> mortal(theme: x)
+rule [x:person, y:person]: like(agent: x, theme: y) & like(agent: y, theme: x) -> date(agent: x, theme: y)
 
 # Query
 ? mortal(theme: socrates)
