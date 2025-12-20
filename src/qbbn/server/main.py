@@ -17,6 +17,7 @@ import qbbn.core.layers.base
 import qbbn.core.layers.clauses
 import qbbn.core.layers.args
 import qbbn.core.layers.coref
+import qbbn.core.layers.entities
 import qbbn.core.layers.logic
 import qbbn.core.layers.ground
 
@@ -46,7 +47,7 @@ def get_openai() -> OpenAI:
 
 class CreateDocRequest(BaseModel):
     text: str
-    run_base: bool = True  # Auto-run base layer by default
+    run_base: bool = True
 
 
 class RunLayerRequest(BaseModel):
