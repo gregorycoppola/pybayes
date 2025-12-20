@@ -1,4 +1,5 @@
 # src/qbbn/core/logical_lang.py
+
 """
 A simple DSL that compiles to our logical primitives.
 
@@ -237,3 +238,4 @@ def format_document(doc: LogicalDocument) -> str:
             lines.append(f"? {format_predicate(pred)}")
     
     return "\n".join(lines)
+
