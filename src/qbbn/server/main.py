@@ -118,12 +118,10 @@ async def api_create_run(req: CreateRunRequest, db: int = 0):
     doc_store = get_doc_store(db)
     run_store = get_run_store(db)
     
-    # Verify doc exists
     doc = doc_store.get(req.doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    # Verify parent run if specified
     if req.parent_run_id:
         parent = run_store.get(req.parent_run_id)
         if not parent:
@@ -146,7 +144,6 @@ async def api_get_run(run_id: str, db: int = 0):
     
     doc = doc_store.get(run.doc_id)
     
-    # Build layers status
     layers = {}
     for lid in list_layers():
         data = run_store.get_data(run_id, lid)
@@ -174,7 +171,6 @@ async def api_process_run(run_id: str, req: ProcessRunRequest = None, db: int = 
     openai_client = get_openai()
     runner = LayerRunner(doc_store, run_store, {"openai": openai_client})
     
-    # Which layers to run
     if req and req.layers:
         layer_ids = req.layers
     else:
