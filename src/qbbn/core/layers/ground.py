@@ -7,12 +7,13 @@ from qbbn.core.layers import Layer, LayerResult, register_layer
 
 class GroundLayer(Layer):
     id = "ground"
-    depends_on = ["logic", "link"]
+    depends_on = ["logic", "link", "entities"]
     ext = ".ground"
     
     def process(self, inputs: dict, context: dict) -> LayerResult:
         logic_data = inputs.get("logic", {})
         link_data = inputs.get("link", {})
+        entities_data = inputs.get("entities", {})
         logic_text = logic_data.get("text", "")
         
         kb = context.get("kb")
@@ -23,7 +24,6 @@ class GroundLayer(Layer):
             return LayerResult(False, None, "no logic text")
         
         try:
-            # Build combined logic text with KB entities
             combined_lines = []
             
             # Add entity declarations from KB
@@ -31,6 +31,14 @@ class GroundLayer(Layer):
             for ent in kb.entities.values():
                 combined_lines.append(f"entity {ent.id} : {ent.type}")
             combined_lines.append("")
+            
+            # Add types from document as entities (so they can be used as arguments)
+            doc_types = entities_data.get("types", [])
+            if doc_types:
+                combined_lines.append("# Document Types (as entities)")
+                for t in doc_types:
+                    combined_lines.append(f"entity {t['id']} : type")
+                combined_lines.append("")
             
             # Add KB facts
             if kb.facts:
@@ -53,19 +61,18 @@ class GroundLayer(Layer):
                     combined_lines.append(line)
                 combined_lines.append("")
             
-            # Add document propositions (skip comments and entity decls from logic output)
+            # Add document propositions
             combined_lines.append("# Document Propositions")
             for line in logic_text.split("\n"):
                 line = line.strip()
                 if not line or line.startswith("#") or line.startswith("entity"):
                     continue
                 if line.startswith("rule"):
-                    continue  # Skip doc rules for now, use KB rules
+                    continue
                 combined_lines.append(line)
             
             combined_text = "\n".join(combined_lines)
             
-            # Now parse and ground
             from qbbn.core.logical_lang import parse_logical
             from qbbn.core.horn import KnowledgeBase as HornKB, format_horn_clause
             
