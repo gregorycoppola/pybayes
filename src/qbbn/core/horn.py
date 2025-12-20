@@ -66,7 +66,7 @@ class KnowledgeBase:
     
     Can ground rules against entities to produce propositions.
     """
-    entities: dict[str, Constant]  # name -> Constant
+    entities: dict[str, Constant]
     types: dict[str, Type]
     clauses: list[HornClause]
     
@@ -98,10 +98,8 @@ class KnowledgeBase:
         
         for clause in self.clauses:
             if clause.is_fact:
-                # Facts are already grounded
                 grounded.append(clause)
             else:
-                # Generate all possible bindings
                 for binding in self._all_bindings(clause.variables):
                     grounded_clause = clause.ground(binding)
                     grounded.append(grounded_clause)
@@ -113,16 +111,13 @@ class KnowledgeBase:
         if not variables:
             return [{}]
         
-        # Get possible values for each variable
         domains = []
         for var in variables:
             entities = self.entities_of_type(var.type.name)
             if not entities:
-                # No entities of this type - no valid bindings
                 return []
             domains.append(entities)
         
-        # Cartesian product
         bindings = []
         for combo in product(*domains):
             binding = {var: const for var, const in zip(variables, combo)}
@@ -146,16 +141,14 @@ class KnowledgeBase:
             clauses=[],
         )
         
-        # Add propositions as facts
         for prop in doc.propositions:
             kb.add_fact(prop)
         
-        # Add rules
         for rule in doc.rules:
             kb.add_rule(
-                premises=[rule.premise],
+                premises=rule.premises,
                 conclusion=rule.conclusion,
-                variables=list(rule.variables),
+                variables=rule.variables,
             )
         
         return kb
@@ -176,26 +169,3 @@ def format_horn_clause(clause: HornClause, show_vars: bool = True) -> str:
         return f"∀[{vars_str}] {premises_str} → {conclusion_str}"
     else:
         return f"{premises_str} → {conclusion_str}"
-
-@classmethod
-def from_logical_document(cls, doc) -> "KnowledgeBase":
-    """Create a KnowledgeBase from a parsed LogicalDocument."""
-    kb = cls(
-        entities=dict(doc.entities),
-        types=dict(doc.types),
-        clauses=[],
-    )
-    
-    # Add propositions as facts
-    for prop in doc.propositions:
-        kb.add_fact(prop)
-    
-    # Add rules (now supports multiple premises)
-    for rule in doc.rules:
-        kb.add_rule(
-            premises=rule.premises,
-            conclusion=rule.conclusion,
-            variables=rule.variables,
-        )
-    
-    return kb
