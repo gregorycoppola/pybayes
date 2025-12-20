@@ -1,9 +1,9 @@
 """
-QBBN CLI - via API.
+QBBN CLI.
 """
 
 import argparse
-from qbbn.cli.commands import doc, layer
+from qbbn.cli.commands import doc, run, layer
 
 
 def main():
@@ -11,6 +11,7 @@ def main():
     subparsers = parser.add_subparsers(dest="command")
     
     doc.add_subparser(subparsers)
+    run.add_subparser(subparsers)
     layer.add_subparser(subparsers)
     
     args = parser.parse_args()

@@ -1,5 +1,5 @@
 """
-Document commands - via API.
+Document commands.
 """
 
 import sys
@@ -23,19 +23,12 @@ def add_subparser(subparsers):
     show_p = doc_sub.add_parser("show", help="Show a document")
     show_p.add_argument("doc_id", help="Document ID")
     show_p.set_defaults(func=doc_show)
-    
-    # run
-    run_p = doc_sub.add_parser("run", help="Run all layers on a document")
-    run_p.add_argument("doc_id", help="Document ID")
-    run_p.set_defaults(func=doc_run)
 
 
 def doc_add(args):
     try:
         result = client.create_doc(args.text)
         print(f"✓ Created: {result['id']}")
-        if result.get("base"):
-            print(f"  base: {result['base']['message']}")
     except Exception as e:
         print(f"✗ Error: {e}")
         sys.exit(1)
@@ -61,25 +54,6 @@ def doc_show(args):
         print(f"ID: {doc['id']}")
         print(f"Text: {doc['text']}")
         print(f"Created: {doc['created_at']}")
-        print()
-        print("Layers:")
-        for lid, layer in doc["layers"].items():
-            status = layer["status"]
-            icon = "✓" if status == "done" else "○" if status == "pending" else "!"
-            print(f"  {icon} {lid}: {status}")
-    except Exception as e:
-        print(f"✗ Error: {e}")
-        sys.exit(1)
-
-
-def doc_run(args):
-    try:
-        result = client.run_all_layers(args.doc_id)
-        print(f"Document: {result['doc_id']}")
-        print()
-        for lid, r in result["results"].items():
-            icon = "✓" if r["success"] else "✗"
-            print(f"{icon} {lid}: {r['message']}")
     except Exception as e:
         print(f"✗ Error: {e}")
         sys.exit(1)
