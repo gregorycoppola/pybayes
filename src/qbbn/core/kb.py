@@ -189,6 +189,18 @@ class KBStore:
         self.client.lrem(self._kb_list_key(), 0, kb_id)
 
 
+def _extract_value(term) -> str:
+    """Extract string value from Constant or Variable."""
+    if hasattr(term, 'entity'):
+        # Constant - get entity id
+        return term.entity.id
+    elif hasattr(term, 'name'):
+        # Variable - get variable name
+        return term.name
+    else:
+        return str(term)
+
+
 def _parse_dsl_into_kb(kb: KnowledgeBase, text: str):
     """Parse .logic DSL and populate KB."""
     from qbbn.core.logical_lang import parse_logical
@@ -200,64 +212,49 @@ def _parse_dsl_into_kb(kb: KnowledgeBase, text: str):
     
     # doc.entities is a dict: {name: Constant(entity=Entity, type=Type)}
     for name, const in doc.entities.items():
-        type_name = const.type.name if hasattr(const.type, 'name') else str(const.type)
+        type_name = const.type.name
         kb.entities[name.lower()] = KBEntity(
             id=name.lower(),
             type=type_name,
             aliases=[name],
         )
     
-    # doc.predicates is a list
-    for pred in doc.predicates:
+    # doc.propositions is a list of Predicate
+    # Predicate has function_name and roles (tuple of (RoleLabel, term) tuples)
+    for prop in doc.propositions:
         args = {}
-        if hasattr(pred, 'arguments'):
-            for arg in pred.arguments:
-                role = arg.role if hasattr(arg, 'role') else str(arg[0])
-                value = arg.value if hasattr(arg, 'value') else str(arg[1])
-                args[role] = value.lower() if isinstance(value, str) else str(value)
+        for role_label, term in prop.roles:
+            args[role_label.name] = _extract_value(term)
         
-        pred_name = pred.name if hasattr(pred, 'name') else str(pred)
-        kb.facts.append(KBFact(predicate=pred_name, args=args))
+        kb.facts.append(KBFact(predicate=prop.function_name, args=args))
     
-    # doc.rules is a list
+    # doc.rules is a list of Rule
+    # Rule has premises (list), conclusion, variables (list), weight
     for rule in doc.rules:
         # Variables
         variables = []
-        if hasattr(rule, 'variables'):
-            for v in rule.variables:
-                v_name = v.name if hasattr(v, 'name') else str(v[0])
-                v_type = v.type_name if hasattr(v, 'type_name') else str(v[1])
-                variables.append((v_name, v_type))
+        for v in rule.variables:
+            variables.append((v.name, v.type.name))
         
-        # Premise
+        # Premise (take first one for now)
         prem_name = "unknown"
         prem_args = {}
-        if hasattr(rule, 'premise'):
-            prem = rule.premise
-            prem_name = prem.name if hasattr(prem, 'name') else str(prem)
-            if hasattr(prem, 'arguments'):
-                for arg in prem.arguments:
-                    role = arg.role if hasattr(arg, 'role') else str(arg[0])
-                    value = arg.value if hasattr(arg, 'value') else str(arg[1])
-                    prem_args[role] = value
+        if rule.premises:
+            prem = rule.premises[0]
+            prem_name = prem.function_name
+            for role_label, term in prem.roles:
+                prem_args[role_label.name] = _extract_value(term)
         
         # Conclusion
-        conc_name = "unknown"
+        conc = rule.conclusion
+        conc_name = conc.function_name
         conc_args = {}
-        if hasattr(rule, 'conclusion'):
-            conc = rule.conclusion
-            conc_name = conc.name if hasattr(conc, 'name') else str(conc)
-            if hasattr(conc, 'arguments'):
-                for arg in conc.arguments:
-                    role = arg.role if hasattr(arg, 'role') else str(arg[0])
-                    value = arg.value if hasattr(arg, 'value') else str(arg[1])
-                    conc_args[role] = value
-        
-        weight = rule.weight if hasattr(rule, 'weight') else 1.0
+        for role_label, term in conc.roles:
+            conc_args[role_label.name] = _extract_value(term)
         
         kb.rules.append(KBRule(
             variables=variables,
             premise=(prem_name, prem_args),
             conclusion=(conc_name, conc_args),
-            weight=weight,
+            weight=rule.weight,
         ))
