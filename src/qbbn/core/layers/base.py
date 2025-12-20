@@ -36,7 +36,7 @@ Token indices are 0-based. End is exclusive (Python slice style).
 
 class BaseLayer(Layer):
     id = "base"
-    depends_on = []  # No dependencies - this IS the foundation
+    depends_on = []
     ext = ".base"
     
     def process(self, inputs: dict, context: dict) -> LayerResult:
@@ -55,11 +55,11 @@ class BaseLayer(Layer):
         corrector = SpellCorrector(openai)
         corrected = corrector.correct(raw_tokens)
         
-        # Build flat token list with corrections
+        # Build flat token list
         flat_tokens = []
         for i, c in enumerate(corrected):
             flat_tokens.append({
-                "idx": i,
+                "flat_idx": i,
                 "text": c.corrected,
                 "original": c.original,
                 "char_pos": c.position,
@@ -83,24 +83,24 @@ class BaseLayer(Layer):
         seg_data = json.loads(response.choices[0].message.content)
         sentence_bounds = seg_data.get("sentences", [])
         
-        # Safety: if empty or incomplete, make whole doc one sentence
+        # Safety: if empty or incomplete
         if not sentence_bounds:
             sentence_bounds = [{"start": 0, "end": len(flat_tokens)}]
         elif sentence_bounds[-1]["end"] < len(flat_tokens):
             sentence_bounds[-1]["end"] = len(flat_tokens)
         
-        # Step 4: Build final structure with (sentence_idx, token_idx) coordinates
+        # Step 4: Build final structure
         sentences = []
         for sent_idx, bounds in enumerate(sentence_bounds):
             sent_tokens = []
             for flat_idx in range(bounds["start"], bounds["end"]):
                 tok = flat_tokens[flat_idx]
                 sent_tokens.append({
-                    "idx": flat_idx - bounds["start"],  # 0-indexed within sentence
+                    "idx": flat_idx - bounds["start"],
                     "text": tok["text"],
                     "original": tok["original"],
                     "char_pos": tok["char_pos"],
-                    "flat_idx": flat_idx,  # Keep for debugging
+                    "flat_idx": flat_idx,
                 })
             
             sentences.append({
@@ -123,12 +123,7 @@ class BaseLayer(Layer):
         # sentence 0
         0: If
         1: someone
-        2: is
-        ...
-        
-        # sentence 1
-        0: Socrates
-        1: is
+        2: is (was: iz)
         ...
         """
         sentences = []
@@ -147,11 +142,19 @@ class BaseLayer(Layer):
             elif current_sent is not None and ":" in line:
                 parts = line.split(":", 1)
                 tok_idx = int(parts[0].strip())
-                text = parts[1].strip()
+                rest = parts[1].strip()
+                
+                # Check for "(was: ...)"
+                original = rest
+                text = rest
+                if "(was:" in rest:
+                    text = rest.split("(was:")[0].strip()
+                    original = rest.split("(was:")[1].rstrip(")").strip()
+                
                 current_sent["tokens"].append({
                     "idx": tok_idx,
                     "text": text,
-                    "original": text,
+                    "original": original,
                     "char_pos": 0,
                     "flat_idx": 0,
                 })

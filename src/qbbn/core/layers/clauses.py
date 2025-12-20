@@ -29,7 +29,7 @@ Reply JSON:
 
 class ClausesLayer(Layer):
     id = "clauses"
-    depends_on = ["base"]  # Now depends on base, not correct
+    depends_on = ["base"]
     ext = ".clause"
     
     def process(self, inputs: dict, context: dict) -> LayerResult:
@@ -77,9 +77,6 @@ class ClausesLayer(Layer):
         [1:5] antecedent verb=2
         [6:9] consequent verb=7
         skip: 0 5
-        
-        # sentence 1
-        [0:4] main verb=1
         """
         import re
         sentences = []
