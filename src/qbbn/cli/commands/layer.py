@@ -14,9 +14,12 @@ from qbbn.core.layers.runner import LayerRunner
 # Import all layers to register them
 import qbbn.core.layers.tokens
 import qbbn.core.layers.correct
+import qbbn.core.layers.segments
 import qbbn.core.layers.clauses
 import qbbn.core.layers.args
 import qbbn.core.layers.coref
+import qbbn.core.layers.logic
+import qbbn.core.layers.ground
 
 
 def add_subparser(subparsers):
