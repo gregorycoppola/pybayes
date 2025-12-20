@@ -1,0 +1,53 @@
+<!-- src/qbbn/server/templates/doc.html -->
+{% extends "base.html" %}
+
+{% block title %}QBBN - {{ doc.id[:8] }}{% endblock %}
+
+{% block content %}
+<div class="doc-header">
+    <h1>Document: {{ doc.id }}</h1>
+    <div class="doc-text">{{ doc.text }}</div>
+    <div class="doc-meta">Created: {{ doc.created_at[:19] }}</div>
+</div>
+
+<h2>Layers</h2>
+
+<div class="layers">
+    {% for layer in layers %}
+    <div class="layer" id="layer-{{ layer.id }}">
+        <div class="layer-header">
+            <span class="layer-name">
+                {{ layer.id }}<span class="layer-ext">{{ layer.ext }}</span>
+            </span>
+            <span class="layer-deps">
+                {% if layer.depends_on %}
+                    ← {{ layer.depends_on | join(", ") }}
+                {% endif %}
+            </span>
+            <span class="layer-status">
+                {% if layer.has_data %}
+                    <span class="status-ok">✓</span>
+                {% else %}
+                    <span class="status-missing">○</span>
+                {% endif %}
+            </span>
+            <button 
+                class="run-btn"
+                hx-post="/doc/{{ doc.id }}/run/{{ layer.id }}?db={{ db }}"
+                hx-target="#layer-{{ layer.id }}-content"
+                hx-swap="innerHTML"
+            >
+                {% if layer.has_data %}↻{% else %}▶{% endif %}
+            </button>
+        </div>
+        <div class="layer-content" id="layer-{{ layer.id }}-content">
+            {% if layer.dsl %}
+            <pre>{{ layer.dsl }}</pre>
+            {% else %}
+            <div class="layer-empty">Not run yet</div>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
