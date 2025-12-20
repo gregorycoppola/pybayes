@@ -109,4 +109,4 @@ Endpoints:
 
 ## License
 
-MIT
+Apache 2
