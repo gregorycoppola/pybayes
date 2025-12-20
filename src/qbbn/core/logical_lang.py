@@ -1,13 +1,12 @@
 # src/qbbn/core/logical_lang.py
-
 """
 A simple DSL that compiles to our logical primitives.
 
 Syntax:
   entity <name> : <type>
   <pred>(<role>: <arg>, ...)
-  rule [<var>:<type>, ...]: <premise> -> <conclusion>
-  ? <predicate>  # query
+  rule [<var>:<type>, ...]: <premise> & <premise> -> <conclusion>
+  ? <predicate>
 """
 
 import re
@@ -20,12 +19,20 @@ from qbbn.core.implication import ImplicationLink
 
 
 @dataclass
+class Rule:
+    """A rule with potentially multiple premises."""
+    premises: list[Predicate]
+    conclusion: Predicate
+    variables: list[Variable]
+
+
+@dataclass
 class LogicalDocument:
     """Parsed logical document."""
     entities: dict[str, Constant] = field(default_factory=dict)
     types: dict[str, Type] = field(default_factory=dict)
     propositions: list[Predicate] = field(default_factory=list)
-    rules: list[ImplicationLink] = field(default_factory=list)
+    rules: list[Rule] = field(default_factory=list)
     queries: list[Predicate] = field(default_factory=list)
 
 
@@ -131,7 +138,7 @@ class LogicalParser:
         self.doc.propositions.append(pred)
     
     def parse_rule(self, line: str):
-        """Parse: rule [x:type, y:type]: premise -> conclusion"""
+        """Parse: rule [x:type, y:type]: premise & premise -> conclusion"""
         # Extract variable declarations
         var_match = re.match(r"rule\s*\[(.*?)\]\s*:\s*(.+)", line)
         if not var_match:
@@ -162,17 +169,17 @@ class LogicalParser:
         premise_str, conclusion_str = body.split("->", 1)
         
         # Handle conjunction in premise
-        if "&" in premise_str:
-            # For now, just take first part - TODO: handle conjunction
-            premise_str = premise_str.split("&")[0]
+        premises = []
+        for part in premise_str.split("&"):
+            pred = self.parse_predicate(part.strip(), allow_variables=True, variables=variables)
+            premises.append(pred)
         
-        premise = self.parse_predicate(premise_str.strip(), allow_variables=True, variables=variables)
         conclusion = self.parse_predicate(conclusion_str.strip(), allow_variables=True, variables=variables)
         
-        rule = ImplicationLink(
-            premise=premise,
+        rule = Rule(
+            premises=premises,
             conclusion=conclusion,
-            variables=tuple(var_list),
+            variables=var_list,
         )
         self.doc.rules.append(rule)
     
@@ -205,9 +212,10 @@ def format_arg(arg) -> str:
     return str(arg)
 
 
-def format_rule(rule: ImplicationLink) -> str:
+def format_rule(rule: Rule) -> str:
     vars_str = ", ".join(f"{v.name}:{v.type.name}" for v in rule.variables)
-    return f"rule [{vars_str}]: {format_predicate(rule.premise)} -> {format_predicate(rule.conclusion)}"
+    premises_str = " & ".join(format_predicate(p) for p in rule.premises)
+    return f"rule [{vars_str}]: {premises_str} -> {format_predicate(rule.conclusion)}"
 
 
 def format_document(doc: LogicalDocument) -> str:
@@ -238,4 +246,3 @@ def format_document(doc: LogicalDocument) -> str:
             lines.append(f"? {format_predicate(pred)}")
     
     return "\n".join(lines)
-

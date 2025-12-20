@@ -1,0 +1,24 @@
+# examples/dating.logic
+
+# The dating example from the paper (Section 4.3.2)
+
+# Entities
+entity jack : person
+entity jill : person
+entity jane : person
+
+# Facts
+lonely(theme: jack)
+exciting(theme: jill)
+exciting(theme: jane)
+like(agent: jill, theme: jack)
+like(agent: jane, theme: jack)
+
+# Rules
+rule [x:person, y:person]: lonely(theme: x) -> like(agent: x, theme: y)
+rule [x:person, y:person]: exciting(theme: y) -> like(agent: x, theme: y)
+rule [x:person, y:person]: like(agent: x, theme: y) & like(agent: y, theme: x) -> date(agent: x, theme: y)
+
+# Queries
+? date(agent: jack, theme: jill)
+? date(agent: jack, theme: jane)
