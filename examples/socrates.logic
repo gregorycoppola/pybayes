@@ -1,0 +1,21 @@
+# examples/socrates.logic
+
+# Classic syllogism example
+
+# Entities
+entity socrates : person
+entity plato : person
+
+# Facts
+man(theme: socrates)
+man(theme: plato)
+philosopher(theme: socrates)
+philosopher(theme: plato)
+
+# Rules
+rule [x:person]: man(theme: x) -> mortal(theme: x)
+rule [x:person]: philosopher(theme: x) -> wise(theme: x)
+
+# Queries
+? mortal(theme: socrates)
+? wise(theme: plato)
