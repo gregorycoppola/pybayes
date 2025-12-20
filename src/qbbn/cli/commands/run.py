@@ -28,6 +28,11 @@ def add_subparser(subparsers):
     show_p.add_argument("run_id", help="Run ID")
     show_p.set_defaults(func=run_show)
     
+    # show-all
+    showall_p = run_sub.add_parser("show-all", help="Show all layer DSLs for a run")
+    showall_p.add_argument("run_id", help="Run ID")
+    showall_p.set_defaults(func=run_show_all)
+    
     # list
     list_p = run_sub.add_parser("list", help="List runs for a document")
     list_p.add_argument("doc_id", help="Document ID")
@@ -81,6 +86,43 @@ def run_show(args):
         for lid, layer in run["layers"].items():
             icon = "✓" if layer["status"] == "done" else "○"
             print(f"  {icon} {lid}")
+    except Exception as e:
+        print(f"✗ Error: {e}")
+        sys.exit(1)
+
+
+def run_show_all(args):
+    try:
+        run = client.get_run(args.run_id)
+        
+        print(f"{'=' * 60}")
+        print(f"Run: {run['id']}")
+        print(f"Doc: {run['doc_id']}")
+        print(f"KB: {run['kb_id']} ({run.get('kb_name', '?')})")
+        print(f"Text: {run.get('doc_text', '')}")
+        print(f"{'=' * 60}")
+        print()
+        
+        # Get layer order from API
+        layers_info = client.list_layers()
+        layer_order = [l['id'] for l in layers_info]
+        
+        for lid in layer_order:
+            layer_status = run["layers"].get(lid, {})
+            if layer_status.get("status") != "done":
+                print(f"--- {lid} (not run) ---")
+                print()
+                continue
+            
+            try:
+                result = client.get_run_layer_dsl(args.run_id, lid)
+                print(f"--- {lid}{result['ext']} ---")
+                print(result["dsl"])
+                print()
+            except:
+                print(f"--- {lid} (error) ---")
+                print()
+                
     except Exception as e:
         print(f"✗ Error: {e}")
         sys.exit(1)
