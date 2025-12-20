@@ -1,14 +1,13 @@
 # src/qbbn/server/main.py
 """
-FastAPI server for QBBN document viewer.
+FastAPI JSON API for QBBN.
 """
 
 import redis
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
-from pathlib import Path
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from openai import OpenAI
 
 from qbbn.core.document import DocumentStore
 from qbbn.core.layers import list_layers, get_layer
@@ -25,19 +24,16 @@ import qbbn.core.layers.logic
 import qbbn.core.layers.ground
 
 
-app = FastAPI(title="QBBN Viewer")
+app = FastAPI(title="QBBN API")
 
-# Setup paths
-SERVER_DIR = Path(__file__).parent
-TEMPLATES_DIR = SERVER_DIR / "templates"
-STATIC_DIR = SERVER_DIR / "static"
-
-# Create dirs if needed
-TEMPLATES_DIR.mkdir(exist_ok=True)
-STATIC_DIR.mkdir(exist_ok=True)
-
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+# CORS for local SolidJS dev server
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def get_store(db: int = 0) -> DocumentStore:
@@ -45,21 +41,134 @@ def get_store(db: int = 0) -> DocumentStore:
     return DocumentStore(client)
 
 
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request, db: int = 0):
+# === Request/Response Models ===
+
+class CreateDocRequest(BaseModel):
+    text: str
+
+
+class RunLayerRequest(BaseModel):
+    force: bool = False
+
+
+class OverrideLayerRequest(BaseModel):
+    dsl: str
+
+
+# === Routes ===
+
+@app.get("/api/layers")
+async def list_all_layers():
+    """List all registered layers."""
+    layers = []
+    for lid in list_layers():
+        layer = get_layer(lid)
+        layers.append({
+            "id": lid,
+            "ext": layer.ext,
+            "depends_on": layer.depends_on,
+        })
+    return {"layers": layers}
+
+
+@app.get("/api/docs")
+async def list_docs(db: int = 0):
     """List all documents."""
     store = get_store(db)
     docs = store.list_all()
-    return templates.TemplateResponse("index.html", {
-        "request": request,
-        "docs": docs,
-        "db": db,
-    })
+    return {
+        "docs": [
+            {"id": d.id, "text": d.text, "created_at": d.created_at}
+            for d in docs
+        ]
+    }
 
 
-@app.get("/doc/{doc_id}", response_class=HTMLResponse)
-async def view_doc(request: Request, doc_id: str, db: int = 0):
-    """View a document with all its layers."""
+@app.post("/api/docs")
+async def create_doc(req: CreateDocRequest, db: int = 0):
+    """Create a new document."""
+    store = get_store(db)
+    doc_id = store.add(req.text)
+    return {"id": doc_id}
+
+
+@app.get("/api/docs/{doc_id}")
+async def get_doc(doc_id: str, db: int = 0):
+    """Get a document with all layer data."""
+    store = get_store(db)
+    doc = store.get(doc_id)
+    
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    # Build layers dict
+    layers = {}
+    for lid in list_layers():
+        data = store.get_data(doc_id, lid)
+        override = store.get_data(doc_id, f"{lid}_override")
+        
+        if data is not None:
+            status = "done"
+        elif override is not None:
+            status = "override"
+            # Parse the override
+            layer = get_layer(lid)
+            try:
+                data = layer.parse_dsl(override)
+            except:
+                data = None
+                status = "error"
+        else:
+            status = "pending"
+        
+        layers[lid] = {
+            "status": status,
+            "data": data,
+            "has_override": override is not None,
+        }
+    
+    return {
+        "id": doc.id,
+        "text": doc.text,
+        "created_at": doc.created_at,
+        "layers": layers,
+    }
+
+
+@app.post("/api/docs/{doc_id}/layers/{layer_id}/run")
+async def run_layer(doc_id: str, layer_id: str, req: RunLayerRequest = None, db: int = 0):
+    """Run a layer on a document."""
+    store = get_store(db)
+    doc = store.get(doc_id)
+    
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    
+    try:
+        get_layer(layer_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    openai_client = OpenAI()
+    runner = LayerRunner(store, {"openai": openai_client})
+    
+    force = req.force if req else False
+    results = runner.run(doc_id, [layer_id], force=force)
+    
+    result = results.get(layer_id)
+    data = store.get_data(doc_id, layer_id)
+    
+    return {
+        "layer_id": layer_id,
+        "success": result.success if result else False,
+        "message": result.message if result else "unknown error",
+        "data": data,
+    }
+
+
+@app.put("/api/docs/{doc_id}/layers/{layer_id}")
+async def override_layer(doc_id: str, layer_id: str, req: OverrideLayerRequest, db: int = 0):
+    """Set a layer override."""
     store = get_store(db)
     doc = store.get(doc_id)
     
@@ -67,74 +176,17 @@ async def view_doc(request: Request, doc_id: str, db: int = 0):
         raise HTTPException(status_code=404, detail="Document not found")
     
     runner = LayerRunner(store, {})
+    errors = runner.set_override(doc_id, layer_id, req.dsl)
     
-    # Get all layer data
-    layers_data = []
-    for lid in list_layers():
-        layer = get_layer(lid)
-        dsl = runner.get_dsl(doc_id, lid)
-        layers_data.append({
-            "id": lid,
-            "ext": layer.ext,
-            "depends_on": layer.depends_on,
-            "dsl": dsl,
-            "has_data": dsl is not None,
-        })
+    if errors:
+        return {"success": False, "errors": errors}
     
-    return templates.TemplateResponse("doc.html", {
-        "request": request,
-        "doc": doc,
-        "layers": layers_data,
-        "db": db,
-    })
+    return {"success": True}
 
 
-@app.get("/doc/{doc_id}/layer/{layer_id}", response_class=HTMLResponse)
-async def view_layer(request: Request, doc_id: str, layer_id: str, db: int = 0):
-    """Get a single layer partial (for HTMX)."""
+@app.delete("/api/docs/{doc_id}/layers/{layer_id}/override")
+async def clear_override(doc_id: str, layer_id: str, db: int = 0):
+    """Clear a layer override."""
     store = get_store(db)
-    runner = LayerRunner(store, {})
-    
-    layer = get_layer(layer_id)
-    dsl = runner.get_dsl(doc_id, layer_id)
-    
-    return templates.TemplateResponse("layer_partial.html", {
-        "request": request,
-        "doc_id": doc_id,
-        "layer": {
-            "id": layer_id,
-            "ext": layer.ext,
-            "dsl": dsl,
-            "has_data": dsl is not None,
-        },
-        "db": db,
-    })
-
-
-@app.post("/doc/{doc_id}/run/{layer_id}", response_class=HTMLResponse)
-async def run_layer(request: Request, doc_id: str, layer_id: str, db: int = 0):
-    """Run a layer (for HTMX)."""
-    from openai import OpenAI
-    
-    store = get_store(db)
-    openai_client = OpenAI()
-    runner = LayerRunner(store, {"openai": openai_client})
-    
-    results = runner.run(doc_id, [layer_id], force=True)
-    result = results.get(layer_id)
-    
-    layer = get_layer(layer_id)
-    dsl = runner.get_dsl(doc_id, layer_id)
-    
-    return templates.TemplateResponse("layer_partial.html", {
-        "request": request,
-        "doc_id": doc_id,
-        "layer": {
-            "id": layer_id,
-            "ext": layer.ext,
-            "dsl": dsl,
-            "has_data": dsl is not None,
-            "message": result.message if result else None,
-        },
-        "db": db,
-    })
+    store.delete_data(doc_id, f"{layer_id}_override")
+    return {"success": True}
