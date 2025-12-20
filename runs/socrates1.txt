@@ -1,0 +1,61 @@
+============================================================
+Run: 4bbc5e033abd
+Doc: 941bc3ef91c3
+KB: 6cacb9c97626 (Socrates KB)
+Text: Socrates is a man
+============================================================
+
+--- base.base ---
+# sentence 0
+0: Socrates
+1: is
+2: a
+3: man
+
+
+--- clauses.clause ---
+# sentence 0
+[0:4] main_clause verb=1
+
+
+--- args.args ---
+# sentence 0
+clause [0:4] main_clause verb=1
+  agent [0:1]
+  theme [2:4]
+
+
+--- coref.coref ---
+# no coreferences
+
+--- entities.ent ---
+# entities
+socrates : person @ (0, 0)
+
+# types
+man @ (0, 3)
+
+
+--- link.link ---
+# linked
+socrates → kb:socrates @ (0, 0)
+
+
+--- logic.logic ---
+# Linked to KB
+# socrates → socrates
+
+# Sentence 0: Propositions
+is(agent: socrates, theme: man)
+
+
+--- ground.ground ---
+man(theme: socrates)
+man(theme: plato)
+philosopher(theme: socrates)
+philosopher(theme: plato)
+is(agent: socrates, theme: man)
+man(theme: socrates) → mortal(theme: socrates)
+man(theme: plato) → mortal(theme: plato)
+philosopher(theme: socrates) → wise(theme: socrates)
+philosopher(theme: plato) → wise(theme: plato)
