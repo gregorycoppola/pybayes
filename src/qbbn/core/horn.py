@@ -176,3 +176,26 @@ def format_horn_clause(clause: HornClause, show_vars: bool = True) -> str:
         return f"∀[{vars_str}] {premises_str} → {conclusion_str}"
     else:
         return f"{premises_str} → {conclusion_str}"
+
+@classmethod
+def from_logical_document(cls, doc) -> "KnowledgeBase":
+    """Create a KnowledgeBase from a parsed LogicalDocument."""
+    kb = cls(
+        entities=dict(doc.entities),
+        types=dict(doc.types),
+        clauses=[],
+    )
+    
+    # Add propositions as facts
+    for prop in doc.propositions:
+        kb.add_fact(prop)
+    
+    # Add rules (now supports multiple premises)
+    for rule in doc.rules:
+        kb.add_rule(
+            premises=rule.premises,
+            conclusion=rule.conclusion,
+            variables=rule.variables,
+        )
+    
+    return kb
