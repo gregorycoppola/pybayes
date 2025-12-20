@@ -7,7 +7,7 @@ from pathlib import Path
 
 from qbbn.core.logical_lang import parse_logical, format_predicate, ParseError
 from qbbn.core.horn import KnowledgeBase
-from qbbn.core.factor_graph import FactorGraph, belief_propagation, query
+from qbbn.core.factor_graph import FactorGraph, belief_propagation, query, BPTrace
 
 
 def add_subparser(subparsers):
@@ -16,6 +16,9 @@ def add_subparser(subparsers):
     parser.add_argument("--iterations", "-i", type=int, default=20, help="BP iterations")
     parser.add_argument("--damping", "-d", type=float, default=0.5, help="BP damping")
     parser.add_argument("--verbose", "-v", action="store_true", help="Show all probabilities")
+    parser.add_argument("--trace", "-t", action="store_true", help="Show convergence trace")
+    parser.add_argument("--csv", type=str, help="Output beliefs to CSV file")
+    parser.add_argument("--csv-messages", type=str, help="Output messages to CSV file")
     parser.set_defaults(func=run_infer)
 
 
@@ -33,8 +36,17 @@ def run_infer(args):
         print(f"  Factors: {stats['factors']}")
         print(f"  Evidence: {stats['evidence']}")
         
+        # Show graph structure
+        print(f"\n=== Structure ===")
+        for f in graph.factors:
+            if f.factor_type == "implication":
+                print(f"  f{f.factor_id}: {f.var_keys[0]} → {f.var_keys[1]} [λ={f.weight}]")
+            else:
+                premises = " ∧ ".join(f.var_keys[:-1])
+                print(f"  f{f.factor_id}: {premises} → {f.var_keys[-1]} [λ={f.weight}]")
+        
         print(f"\n=== Running BP (iter={args.iterations}, damping={args.damping}) ===")
-        belief_propagation(graph, iterations=args.iterations, damping=args.damping)
+        trace = belief_propagation(graph, iterations=args.iterations, damping=args.damping)
         
         # Show queries
         if doc.queries:
@@ -42,7 +54,20 @@ def run_infer(args):
             for q in doc.queries:
                 key = format_predicate(q)
                 prob = query(graph, key)
-                print(f"  {key}: {prob:.3f}")
+                print(f"  {key}: {prob:.4f}")
+        
+        # Show trace
+        if args.trace:
+            trace.print_summary()
+        
+        # CSV output
+        if args.csv:
+            trace.to_csv(args.csv)
+            print(f"\nWrote beliefs to {args.csv}")
+        
+        if args.csv_messages:
+            trace.to_messages_csv(args.csv_messages)
+            print(f"Wrote messages to {args.csv_messages}")
         
         # Show all probabilities
         if args.verbose:
@@ -50,13 +75,12 @@ def run_infer(args):
             sorted_vars = sorted(graph.variables.items(), key=lambda x: -x[1].prob_true)
             for key, var in sorted_vars:
                 ev = " [E]" if var.is_evidence else ""
-                print(f"  {key}: {var.prob_true:.3f}{ev}")
+                print(f"  {key}: {var.prob_true:.4f}{ev}")
         else:
-            # Just show non-evidence high probability
             print(f"\n=== Inferred (P > 0.5) ===")
             for key, var in sorted(graph.variables.items()):
                 if var.prob_true > 0.5 and not var.is_evidence:
-                    print(f"  {key}: {var.prob_true:.3f}")
+                    print(f"  {key}: {var.prob_true:.4f}")
         
     except FileNotFoundError:
         print(f"File not found: {args.file}")
