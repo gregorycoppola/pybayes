@@ -4,7 +4,6 @@ Knowledge Base - stored with UUID, loaded from .logic DSL.
 
 import json
 import uuid
-from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass, field
 
@@ -201,33 +200,76 @@ def _parse_dsl_into_kb(kb: KnowledgeBase, text: str):
     except Exception as e:
         raise ValueError(f"Failed to parse DSL: {e}")
     
+    # Debug: print what we get
+    # print(f"DEBUG doc.entities: {doc.entities}")
+    # print(f"DEBUG doc.predicates: {doc.predicates}")
+    # print(f"DEBUG doc.rules: {doc.rules}")
+    
     for ent in doc.entities:
-        kb.entities[ent.name.lower()] = KBEntity(
-            id=ent.name.lower(),
-            type=ent.type_name,
-            aliases=[ent.name],
+        # Handle both object and tuple forms
+        if hasattr(ent, 'name'):
+            name = ent.name
+            type_name = ent.type_name
+        else:
+            # Assume it's a tuple or has different structure
+            name = str(ent[0]) if isinstance(ent, (list, tuple)) else str(ent)
+            type_name = str(ent[1]) if isinstance(ent, (list, tuple)) and len(ent) > 1 else "entity"
+        
+        kb.entities[name.lower()] = KBEntity(
+            id=name.lower(),
+            type=type_name,
+            aliases=[name],
         )
     
     for pred in doc.predicates:
         args = {}
-        for arg in pred.arguments:
-            args[arg.role] = arg.value.lower() if hasattr(arg, 'value') else str(arg.value)
-        kb.facts.append(KBFact(predicate=pred.name, args=args))
+        if hasattr(pred, 'arguments'):
+            for arg in pred.arguments:
+                if hasattr(arg, 'role'):
+                    args[arg.role] = arg.value.lower() if hasattr(arg, 'value') else str(arg.value)
+        elif hasattr(pred, 'args'):
+            args = pred.args
+        
+        pred_name = pred.name if hasattr(pred, 'name') else str(pred)
+        kb.facts.append(KBFact(predicate=pred_name, args=args))
     
     for rule in doc.rules:
-        variables = [(v.name, v.type_name) for v in rule.variables]
+        if hasattr(rule, 'variables'):
+            variables = [(v.name, v.type_name) if hasattr(v, 'name') else (str(v[0]), str(v[1])) for v in rule.variables]
+        else:
+            variables = []
         
-        prem_args = {}
-        for arg in rule.premise.arguments:
-            prem_args[arg.role] = arg.value if hasattr(arg, 'value') else str(arg.value)
+        # Premise
+        if hasattr(rule, 'premise'):
+            prem = rule.premise
+            prem_name = prem.name if hasattr(prem, 'name') else str(prem)
+            prem_args = {}
+            if hasattr(prem, 'arguments'):
+                for arg in prem.arguments:
+                    if hasattr(arg, 'role'):
+                        prem_args[arg.role] = arg.value if hasattr(arg, 'value') else str(arg)
+        else:
+            prem_name = "unknown"
+            prem_args = {}
         
-        conc_args = {}
-        for arg in rule.conclusion.arguments:
-            conc_args[arg.role] = arg.value if hasattr(arg, 'value') else str(arg.value)
+        # Conclusion
+        if hasattr(rule, 'conclusion'):
+            conc = rule.conclusion
+            conc_name = conc.name if hasattr(conc, 'name') else str(conc)
+            conc_args = {}
+            if hasattr(conc, 'arguments'):
+                for arg in conc.arguments:
+                    if hasattr(arg, 'role'):
+                        conc_args[arg.role] = arg.value if hasattr(arg, 'value') else str(arg)
+        else:
+            conc_name = "unknown"
+            conc_args = {}
+        
+        weight = rule.weight if hasattr(rule, 'weight') else 1.0
         
         kb.rules.append(KBRule(
             variables=variables,
-            premise=(rule.premise.name, prem_args),
-            conclusion=(rule.conclusion.name, conc_args),
-            weight=rule.weight if hasattr(rule, 'weight') else 1.0,
+            premise=(prem_name, prem_args),
+            conclusion=(conc_name, conc_args),
+            weight=weight,
         ))
