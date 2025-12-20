@@ -1,18 +1,12 @@
 # src/qbbn/core/factor_graph.py
 """
 Factor Graph for QBBN (Section 6-7).
-
-Log-linear model: P(x) ∝ exp(-Σ λᵢ fᵢ(x))
-
-For a rule A → B with weight λ:
-  - If A=1 and B=0 (violation): cost = λ
-  - Otherwise: cost = 0
-
-Factor potential: φ(A,B) = exp(-λ * I[A=1, B=0])
 """
 
 import math
+import csv
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Callable
 
 from qbbn.core.horn import HornClause, KnowledgeBase
@@ -23,7 +17,7 @@ from qbbn.core.logical_lang import format_predicate
 class VariableNode:
     """A binary variable (proposition)."""
     key: str
-    belief: list[float] = field(default_factory=lambda: [0.5, 0.5])  # [P(0), P(1)]
+    belief: list[float] = field(default_factory=lambda: [0.5, 0.5])
     is_evidence: bool = False
     
     def set_evidence(self, value: bool):
@@ -42,12 +36,9 @@ class VariableNode:
 class FactorNode:
     """A factor connecting variables."""
     factor_id: int
-    var_keys: list[str]  # variables this factor connects
+    var_keys: list[str]
     weight: float
-    factor_type: str  # "implication" or "conjunction_implication"
-    
-    # Messages: factor -> variable
-    # messages[var_key] = [msg_to_0, msg_to_1]
+    factor_type: str
     messages: dict[str, list[float]] = field(default_factory=dict)
     
     def init_messages(self):
@@ -60,8 +51,6 @@ class FactorGraph:
     """Factor graph for belief propagation."""
     variables: dict[str, VariableNode] = field(default_factory=dict)
     factors: list[FactorNode] = field(default_factory=list)
-    
-    # Index: which factors connect to each variable
     var_to_factors: dict[str, list[int]] = field(default_factory=dict)
     
     def add_variable(self, key: str) -> VariableNode:
@@ -71,7 +60,6 @@ class FactorGraph:
         return self.variables[key]
     
     def add_implication_factor(self, premise_key: str, conclusion_key: str, weight: float) -> None:
-        """Add factor for: premise → conclusion [weight]"""
         self.add_variable(premise_key)
         self.add_variable(conclusion_key)
         
@@ -89,7 +77,6 @@ class FactorGraph:
         self.var_to_factors[conclusion_key].append(factor_idx)
     
     def add_conjunction_factor(self, premise_keys: list[str], conclusion_key: str, weight: float) -> None:
-        """Add factor for: p1 ∧ p2 ∧ ... → conclusion [weight]"""
         for pk in premise_keys:
             self.add_variable(pk)
         self.add_variable(conclusion_key)
@@ -119,12 +106,10 @@ class FactorGraph:
         
         for clause in kb.ground_all():
             if clause.is_fact:
-                # Facts are evidence
                 key = format_predicate(clause.conclusion)
                 graph.add_variable(key)
                 graph.set_evidence(key, True)
             else:
-                # Rules become factors
                 premise_keys = [format_predicate(p) for p in clause.premises]
                 conclusion_key = format_predicate(clause.conclusion)
                 
@@ -145,25 +130,13 @@ class FactorGraph:
 
 
 def compute_factor_potential(factor: FactorNode, assignment: dict[str, int]) -> float:
-    """
-    Compute φ(assignment) for a factor.
-    
-    For implication A → B with weight λ:
-      - Violation (A=1, B=0): φ = exp(-λ)
-      - Otherwise: φ = 1
-    
-    For conjunction A ∧ B → C with weight λ:
-      - Violation (A=1, B=1, C=0): φ = exp(-λ)
-      - Otherwise: φ = 1
-    """
+    """Compute φ(assignment) for a factor."""
     if factor.factor_type == "implication":
         premise_key = factor.var_keys[0]
         conclusion_key = factor.var_keys[1]
-        
         premise_val = assignment[premise_key]
         conclusion_val = assignment[conclusion_key]
         
-        # Violation: premise true but conclusion false
         if premise_val == 1 and conclusion_val == 0:
             return math.exp(-factor.weight)
         return 1.0
@@ -171,12 +144,9 @@ def compute_factor_potential(factor: FactorNode, assignment: dict[str, int]) -> 
     elif factor.factor_type == "conjunction_implication":
         conclusion_key = factor.var_keys[-1]
         premise_keys = factor.var_keys[:-1]
-        
-        # Check if all premises are true
         all_premises_true = all(assignment[pk] == 1 for pk in premise_keys)
         conclusion_val = assignment[conclusion_key]
         
-        # Violation: all premises true but conclusion false
         if all_premises_true and conclusion_val == 0:
             return math.exp(-factor.weight)
         return 1.0
@@ -184,28 +154,91 @@ def compute_factor_potential(factor: FactorNode, assignment: dict[str, int]) -> 
     return 1.0
 
 
-def belief_propagation(graph: FactorGraph, iterations: int = 20, damping: float = 0.5) -> None:
-    """
-    Run loopy belief propagation.
+@dataclass
+class BPTrace:
+    """Trace of belief propagation iterations."""
+    iterations: list[dict] = field(default_factory=list)
     
-    Messages:
-      - μ_{f→x}(x): factor f to variable x
-      - μ_{x→f}(x): variable x to factor f
+    def record(self, iteration: int, graph: "FactorGraph", messages: dict):
+        """Record state at this iteration."""
+        beliefs = {k: v.prob_true for k, v in graph.variables.items()}
+        
+        # Extract factor->var messages
+        factor_msgs = {}
+        for factor in graph.factors:
+            for var_key, msg in factor.messages.items():
+                factor_msgs[f"f{factor.factor_id}->{var_key}"] = msg[1]  # P(true)
+        
+        self.iterations.append({
+            "iteration": iteration,
+            "beliefs": beliefs,
+            "factor_messages": factor_msgs,
+        })
     
-    Update equations:
-      μ_{x→f}(x) = ∏_{g ∈ N(x) \ f} μ_{g→x}(x)
-      μ_{f→x}(x) = Σ_{~x} φ(X_f) ∏_{y ∈ X_f \ x} μ_{y→f}(y)
+    def to_csv(self, path: str):
+        """Write beliefs over iterations to CSV."""
+        if not self.iterations:
+            return
+        
+        # Get all variable keys
+        var_keys = sorted(self.iterations[0]["beliefs"].keys())
+        
+        with open(path, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["iteration"] + var_keys)
+            
+            for it in self.iterations:
+                row = [it["iteration"]] + [it["beliefs"].get(k, 0) for k in var_keys]
+                writer.writerow(row)
     
-    Belief:
-      b(x) ∝ ∏_{f ∈ N(x)} μ_{f→x}(x)
-    """
+    def to_messages_csv(self, path: str):
+        """Write messages over iterations to CSV."""
+        if not self.iterations:
+            return
+        
+        msg_keys = sorted(self.iterations[0]["factor_messages"].keys())
+        
+        with open(path, "w", newline="") as f:
+            writer = csv.writer(f)
+            writer.writerow(["iteration"] + msg_keys)
+            
+            for it in self.iterations:
+                row = [it["iteration"]] + [it["factor_messages"].get(k, 0) for k in msg_keys]
+                writer.writerow(row)
+    
+    def print_summary(self):
+        """Print convergence summary."""
+        if len(self.iterations) < 2:
+            return
+        
+        first = self.iterations[0]["beliefs"]
+        last = self.iterations[-1]["beliefs"]
+        
+        print(f"\nConvergence over {len(self.iterations)} iterations:")
+        for key in sorted(first.keys()):
+            start = first[key]
+            end = last[key]
+            delta = end - start
+            arrow = "↑" if delta > 0.01 else "↓" if delta < -0.01 else "→"
+            print(f"  {key}: {start:.3f} {arrow} {end:.3f} (Δ={delta:+.3f})")
+
+
+def belief_propagation(graph: FactorGraph, iterations: int = 20, damping: float = 0.5, 
+                       trace: BPTrace = None) -> BPTrace:
+    """Run loopy belief propagation with optional tracing."""
+    if trace is None:
+        trace = BPTrace()
+    
     # Initialize variable->factor messages
     var_to_factor_msgs: dict[tuple[str, int], list[float]] = {}
     for var_key, factor_indices in graph.var_to_factors.items():
         for fi in factor_indices:
             var_to_factor_msgs[(var_key, fi)] = [1.0, 1.0]
     
-    for iteration in range(iterations):
+    # Record initial state
+    trace.record(0, graph, var_to_factor_msgs)
+    
+    for iteration in range(1, iterations + 1):
         max_change = 0.0
         
         # Update factor -> variable messages
@@ -215,25 +248,20 @@ def belief_propagation(graph: FactorGraph, iterations: int = 20, damping: float 
                 
                 new_msg = [0.0, 0.0]
                 
-                # Sum over all assignments to other variables
                 for target_val in [0, 1]:
                     total = 0.0
-                    
-                    # Enumerate assignments to other vars
                     n_other = len(other_vars)
+                    
                     for bits in range(2 ** n_other):
                         assignment = {target_var: target_val}
                         for i, ov in enumerate(other_vars):
                             assignment[ov] = (bits >> i) & 1
                         
-                        # Factor potential
                         potential = compute_factor_potential(factor, assignment)
                         
-                        # Product of incoming messages from other vars
                         msg_product = 1.0
                         for ov in other_vars:
                             ov_val = assignment[ov]
-                            # Message from variable to this factor
                             msg = var_to_factor_msgs.get((ov, factor.factor_id), [1.0, 1.0])
                             msg_product *= msg[ov_val]
                         
@@ -263,12 +291,10 @@ def belief_propagation(graph: FactorGraph, iterations: int = 20, damping: float 
             var = graph.variables[var_key]
             
             if var.is_evidence:
-                # Evidence: send fixed message
                 for fi in factor_indices:
                     var_to_factor_msgs[(var_key, fi)] = var.belief.copy()
             else:
                 for fi in factor_indices:
-                    # Product of all incoming factor messages except fi
                     new_msg = [1.0, 1.0]
                     for other_fi in factor_indices:
                         if other_fi != fi:
@@ -277,7 +303,6 @@ def belief_propagation(graph: FactorGraph, iterations: int = 20, damping: float 
                             new_msg[0] *= incoming[0]
                             new_msg[1] *= incoming[1]
                     
-                    # Normalize
                     msg_sum = new_msg[0] + new_msg[1]
                     if msg_sum > 0:
                         new_msg = [new_msg[0] / msg_sum, new_msg[1] / msg_sum]
@@ -294,17 +319,42 @@ def belief_propagation(graph: FactorGraph, iterations: int = 20, damping: float 
                     belief[0] *= msg[0]
                     belief[1] *= msg[1]
                 
-                # Normalize
                 b_sum = belief[0] + belief[1]
                 if b_sum > 0:
                     var.belief = [belief[0] / b_sum, belief[1] / b_sum]
         
-        # Check convergence
+        # Record this iteration
+        trace.record(iteration, graph, var_to_factor_msgs)
+        
         if max_change < 1e-6:
             break
+    
+    return trace
 
 
 def query(graph: FactorGraph, key: str) -> float:
     if key in graph.variables:
         return graph.variables[key].prob_true
     return 0.0
+```
+
+Now a simpler chain example:
+```
+# examples/chain.logic
+
+# Simple chain: a1 -> a2 -> a3 -> a4
+# Like Figure 6 in the paper
+
+entity x : node
+
+# Start of chain is true
+a1(n: x)
+
+# Chain rules
+rule []: a1(n: x) -> a2(n: x) [2.0]
+rule []: a2(n: x) -> a3(n: x) [2.0]
+rule []: a3(n: x) -> a4(n: x) [2.0]
+
+? a2(n: x)
+? a3(n: x)
+? a4(n: x)
