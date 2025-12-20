@@ -3,7 +3,7 @@ QBBN CLI.
 """
 
 import argparse
-from qbbn.cli.commands import doc, run, layer
+from qbbn.cli.commands import doc, kb, run, layer
 
 
 def main():
@@ -11,6 +11,7 @@ def main():
     subparsers = parser.add_subparsers(dest="command")
     
     doc.add_subparser(subparsers)
+    kb.add_subparser(subparsers)
     run.add_subparser(subparsers)
     layer.add_subparser(subparsers)
     

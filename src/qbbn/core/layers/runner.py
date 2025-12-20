@@ -1,17 +1,17 @@
 """
-Layer execution runner - now works on runs, not docs directly.
+Layer execution runner - works on runs with KB from store.
 """
 
-from typing import Any
-from qbbn.core.layers import Layer, get_layer, resolve_dependencies, LayerResult
+from qbbn.core.layers import get_layer, resolve_dependencies, LayerResult
 
 
 class LayerRunner:
     """Runs layers on a run workspace."""
     
-    def __init__(self, doc_store, run_store, context: dict = None):
+    def __init__(self, doc_store, run_store, kb_store=None, context: dict = None):
         self.doc_store = doc_store
         self.run_store = run_store
+        self.kb_store = kb_store
         self.context = context or {}
     
     def run(self, run_id: str, layer_ids: list[str], force: bool = False) -> dict[str, LayerResult]:
@@ -20,10 +20,12 @@ class LayerRunner:
         if not run:
             return {"_error": LayerResult(False, None, "run not found")}
         
-        # Add kb_path to context
-        self.context["kb_dir"] = run.kb_path
+        # Load KB and add to context
+        if self.kb_store:
+            kb = self.kb_store.get(run.kb_id)
+            if kb:
+                self.context["kb"] = kb
         
-        # Resolve dependencies
         all_layers = resolve_dependencies(layer_ids)
         
         results = {}
@@ -31,13 +33,11 @@ class LayerRunner:
         for lid in all_layers:
             layer = get_layer(lid)
             
-            # Check cache
             if not force and self.run_store.has_data(run_id, lid):
                 data = self.run_store.get_data(run_id, lid)
                 results[lid] = LayerResult(True, data, "cached")
                 continue
             
-            # Gather inputs
             inputs = {}
             missing = []
             for dep in layer.depends_on:
@@ -50,12 +50,10 @@ class LayerRunner:
                 results[lid] = LayerResult(False, None, f"missing deps: {missing}")
                 continue
             
-            # Also pass raw doc
             doc = self.doc_store.get(run.doc_id)
             if doc:
                 inputs["_doc"] = doc
             
-            # Run layer
             try:
                 result = layer.process(inputs, self.context)
                 if result.success:

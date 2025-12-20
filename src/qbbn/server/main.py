@@ -18,11 +18,10 @@ import qbbn.core.layers.logic
 import qbbn.core.layers.ground
 
 # Import routers
-from qbbn.server.routes import docs, runs, layers
+from qbbn.server.routes import docs, runs, layers, kbs
 
 
 def print_routes(app: FastAPI):
-    """Print all registered routes."""
     print("\n" + "=" * 60)
     print("QBBN API Routes")
     print("=" * 60)
@@ -33,7 +32,6 @@ def print_routes(app: FastAPI):
             methods = ", ".join(route.methods - {"HEAD", "OPTIONS"})
             routes.append((methods, route.path, route.name))
     
-    # Sort by path
     routes.sort(key=lambda r: (r[1], r[0]))
     
     for methods, path, name in routes:
@@ -44,11 +42,8 @@ def print_routes(app: FastAPI):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
     print_routes(app)
     yield
-    # Shutdown
-    pass
 
 
 app = FastAPI(title="QBBN API", lifespan=lifespan)
@@ -61,8 +56,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include routers
 app.include_router(docs.router)
+app.include_router(kbs.router)
 app.include_router(runs.router)
 app.include_router(layers.router)
 

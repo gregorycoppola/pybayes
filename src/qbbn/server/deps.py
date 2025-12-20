@@ -7,6 +7,7 @@ from openai import OpenAI
 
 from qbbn.core.document import DocumentStore
 from qbbn.core.run import RunStore
+from qbbn.core.kb import KBStore
 
 
 def get_redis(db: int = 0):
@@ -19,6 +20,10 @@ def get_doc_store(db: int = 0) -> DocumentStore:
 
 def get_run_store(db: int = 0) -> RunStore:
     return RunStore(get_redis(db))
+
+
+def get_kb_store(db: int = 0) -> KBStore:
+    return KBStore(get_redis(db))
 
 
 def get_openai() -> OpenAI:
