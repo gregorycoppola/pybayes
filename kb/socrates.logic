@@ -1,0 +1,18 @@
+# Knowledge about ancient philosophers
+
+# Entities
+entity socrates : person
+entity plato : person
+entity aristotle : person
+
+# Facts
+man(theme: socrates)
+man(theme: plato)
+man(theme: aristotle)
+philosopher(theme: socrates)
+philosopher(theme: plato)
+philosopher(theme: aristotle)
+
+# Rules
+rule [x:person]: man(theme: x) -> mortal(theme: x)
+rule [x:person]: philosopher(theme: x) -> wise(theme: x)

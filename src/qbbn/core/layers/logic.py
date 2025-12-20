@@ -1,5 +1,5 @@
 """
-Logic layer - translate syntax to logical form.
+Logic layer - translate syntax to logical form, using KB links when available.
 """
 
 from qbbn.core.layers import Layer, LayerResult, register_layer
@@ -7,7 +7,7 @@ from qbbn.core.layers import Layer, LayerResult, register_layer
 
 class LogicLayer(Layer):
     id = "logic"
-    depends_on = ["base", "clauses", "args", "coref", "entities"]
+    depends_on = ["base", "clauses", "args", "coref", "entities", "link"]
     ext = ".logic"
     
     def process(self, inputs: dict, context: dict) -> LayerResult:
@@ -16,6 +16,7 @@ class LogicLayer(Layer):
         args_data = inputs.get("args", {})
         coref_data = inputs.get("coref", {})
         entities_data = inputs.get("entities", {})
+        link_data = inputs.get("link", {})
         
         sentences = base_data.get("sentences", [])
         coreferences = coref_data.get("coreferences", [])
@@ -26,29 +27,30 @@ class LogicLayer(Layer):
             for tok in sent["tokens"]:
                 token_lookup[(sent["idx"], tok["idx"])] = tok["text"]
         
-        # Build entity lookup: (sent_idx, tok_idx) -> entity_id
+        # Build entity lookup from links
+        # Prefer KB IDs when available, fall back to discourse IDs
         entity_lookup = {}
-        for ent in entities_data.get("entities", []):
+        
+        for link in link_data.get("links", []):
+            m = tuple(link["mention"])
+            entity_lookup[m] = link["kb_id"]  # Use KB ID
+        
+        for ent in link_data.get("unlinked", []):
             m = tuple(ent["mention"])
-            entity_lookup[m] = ent["id"]
+            entity_lookup[m] = ent["discourse_id"]  # Use discourse ID
         
         # Build quantifier lookup: (sent_idx, tok_idx) -> var_name
         quant_lookup = {}
-        for q in entities_data.get("quantifiers", []):
-            m = tuple(q["mention"])
-            quant_lookup[m] = q["var"]
-        
-        # Build var_map from coreferences and quantifiers
         var_map = {}
         for q in entities_data.get("quantifiers", []):
             m = tuple(q["mention"])
+            quant_lookup[m] = q["var"]
             var_map[m] = q["var"]
         
         # Extend var_map with coreferences
         for coref in coreferences:
             a = tuple(coref["a"])
             b = tuple(coref["b"])
-            # If one is a quantifier, both get that var
             if a in var_map:
                 var_map[b] = var_map[a]
             elif b in var_map:
@@ -56,12 +58,21 @@ class LogicLayer(Layer):
         
         lines = []
         
-        # Emit entity declarations
-        entities = entities_data.get("entities", [])
-        if entities:
-            lines.append("# Entities")
-            for ent in entities:
-                lines.append(f"entity {ent['id']} : {ent['type']}")
+        # Emit entity declarations for unlinked entities only
+        # (KB entities are already declared in the KB)
+        unlinked = link_data.get("unlinked", [])
+        if unlinked:
+            lines.append("# New entities (not in KB)")
+            for ent in unlinked:
+                lines.append(f"entity {ent['discourse_id']} : {ent.get('discourse_type', 'entity')}")
+            lines.append("")
+        
+        # Note linked entities
+        linked = link_data.get("links", [])
+        if linked:
+            lines.append("# Linked to KB")
+            for link in linked:
+                lines.append(f"# {link['discourse_id']} → {link['kb_id']}")
             lines.append("")
         
         # Collect quantifier variable types
@@ -136,7 +147,7 @@ class LogicLayer(Layer):
             abs_start = clause_start + arg["start"]
             abs_end = clause_start + arg["end"]
             
-            # Check if any token is a variable
+            # Check if any token is a variable or entity
             var_name = None
             entity_name = None
             for tok_idx in range(abs_start, abs_end):
