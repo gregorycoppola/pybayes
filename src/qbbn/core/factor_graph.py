@@ -336,4 +336,3 @@ def query(graph: FactorGraph, key: str) -> float:
     if key in graph.variables:
         return graph.variables[key].prob_true
     return 0.0
- a4(n: x)
