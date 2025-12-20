@@ -5,7 +5,7 @@ A simple DSL that compiles to our logical primitives.
 Syntax:
   entity <name> : <type>
   <pred>(<role>: <arg>, ...)
-  rule [<var>:<type>, ...]: <premise> & <premise> -> <conclusion>
+  rule [<var>:<type>, ...]: <premise> & <premise> -> <conclusion> [weight]
   ? <predicate>
 """
 
@@ -15,15 +15,15 @@ from dataclasses import dataclass, field
 from qbbn.core.logic import (
     Type, RoleLabel, Entity, Constant, Variable, Predicate
 )
-from qbbn.core.implication import ImplicationLink
 
 
 @dataclass
 class Rule:
-    """A rule with potentially multiple premises."""
+    """A rule with potentially multiple premises and a weight."""
     premises: list[Predicate]
     conclusion: Predicate
     variables: list[Variable]
+    weight: float = 1.0  # default weight
 
 
 @dataclass
@@ -59,7 +59,6 @@ class LogicalParser:
         for i, line in enumerate(lines, 1):
             line = line.strip()
             
-            # Skip empty lines and comments
             if not line or line.startswith("#"):
                 continue
             
@@ -83,7 +82,6 @@ class LogicalParser:
             raise ValueError(f"Unknown syntax: {line}")
     
     def parse_entity(self, line: str):
-        """Parse: entity jack : person"""
         match = re.match(r"entity\s+(\w+)\s*:\s*(\w+)", line)
         if not match:
             raise ValueError("Expected: entity <name> : <type>")
@@ -95,7 +93,6 @@ class LogicalParser:
         self.doc.entities[name] = const
     
     def parse_predicate(self, text: str, allow_variables: bool = False, variables: dict = None) -> Predicate:
-        """Parse: pred(role: arg, role: arg)"""
         variables = variables or {}
         
         match = re.match(r"(\w+)\s*\((.*)\)", text.strip())
@@ -116,13 +113,10 @@ class LogicalParser:
                 role_name, arg_name = role_match.groups()
                 role = RoleLabel(role_name)
                 
-                # Is it a variable?
                 if arg_name in variables:
                     arg = variables[arg_name]
-                # Is it a known entity?
                 elif arg_name in self.doc.entities:
                     arg = self.doc.entities[arg_name]
-                # Allow variables in rules
                 elif allow_variables:
                     raise ValueError(f"Unknown variable: {arg_name}")
                 else:
@@ -133,16 +127,22 @@ class LogicalParser:
         return Predicate(func_name, tuple(roles))
     
     def parse_proposition(self, line: str):
-        """Parse a grounded predicate."""
         pred = self.parse_predicate(line, allow_variables=False)
         self.doc.propositions.append(pred)
     
     def parse_rule(self, line: str):
-        """Parse: rule [x:type, y:type]: premise & premise -> conclusion"""
+        """Parse: rule [x:type, y:type]: premise & premise -> conclusion [weight]"""
+        # Extract weight if present
+        weight = 1.0
+        weight_match = re.search(r'\[(\d+\.?\d*)\]\s*$', line)
+        if weight_match:
+            weight = float(weight_match.group(1))
+            line = line[:weight_match.start()].strip()
+        
         # Extract variable declarations
         var_match = re.match(r"rule\s*\[(.*?)\]\s*:\s*(.+)", line)
         if not var_match:
-            raise ValueError("Expected: rule [var:type, ...]: premise -> conclusion")
+            raise ValueError("Expected: rule [var:type, ...]: premise -> conclusion [weight]")
         
         var_decls, body = var_match.groups()
         
@@ -180,24 +180,22 @@ class LogicalParser:
             premises=premises,
             conclusion=conclusion,
             variables=var_list,
+            weight=weight,
         )
         self.doc.rules.append(rule)
     
     def parse_query(self, line: str):
-        """Parse: ? predicate(...)"""
         pred_str = line[1:].strip()
         pred = self.parse_predicate(pred_str, allow_variables=False)
         self.doc.queries.append(pred)
 
 
 def parse_logical(text: str) -> LogicalDocument:
-    """Parse logical language text into a LogicalDocument."""
     parser = LogicalParser()
     return parser.parse(text)
 
 
 def format_predicate(pred: Predicate) -> str:
-    """Format a predicate for display."""
     args = ", ".join(f"{r.name}: {format_arg(a)}" for r, a in pred.roles)
     return f"{pred.function_name}({args})"
 
@@ -215,11 +213,11 @@ def format_arg(arg) -> str:
 def format_rule(rule: Rule) -> str:
     vars_str = ", ".join(f"{v.name}:{v.type.name}" for v in rule.variables)
     premises_str = " & ".join(format_predicate(p) for p in rule.premises)
-    return f"rule [{vars_str}]: {premises_str} -> {format_predicate(rule.conclusion)}"
+    weight_str = f" [{rule.weight}]" if rule.weight != 1.0 else ""
+    return f"rule [{vars_str}]: {premises_str} -> {format_predicate(rule.conclusion)}{weight_str}"
 
 
 def format_document(doc: LogicalDocument) -> str:
-    """Format a document for display."""
     lines = []
     
     if doc.entities:

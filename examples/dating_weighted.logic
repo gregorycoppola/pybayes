@@ -1,0 +1,23 @@
+# examples/dating_weighted.logic
+
+# Dating with weights
+
+entity jack : person
+entity jill : person
+entity jane : person
+
+# Facts
+lonely(theme: jack)
+exciting(theme: jill)
+exciting(theme: jane)
+like(agent: jill, theme: jack)
+like(agent: jane, theme: jack)
+
+# Rules with weights
+rule [x:person, y:person]: lonely(theme: x) -> like(agent: x, theme: y) [0.3]
+rule [x:person, y:person]: exciting(theme: y) -> like(agent: x, theme: y) [0.5]
+rule [x:person, y:person]: like(agent: x, theme: y) & like(agent: y, theme: x) -> date(agent: x, theme: y) [0.9]
+
+# Queries
+? date(agent: jack, theme: jill)
+? date(agent: jack, theme: jane)
