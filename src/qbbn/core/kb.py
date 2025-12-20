@@ -162,10 +162,8 @@ class KBStore:
             created_at=datetime.utcnow().isoformat(),
         )
         
-        # Parse DSL
         _parse_dsl_into_kb(kb, dsl_text)
         
-        # Store
         self.client.set(self._kb_key(kb_id), json.dumps(kb.to_dict()))
         self.client.rpush(self._kb_list_key(), kb_id)
         
@@ -200,70 +198,60 @@ def _parse_dsl_into_kb(kb: KnowledgeBase, text: str):
     except Exception as e:
         raise ValueError(f"Failed to parse DSL: {e}")
     
-    # Debug: print what we get
-    # print(f"DEBUG doc.entities: {doc.entities}")
-    # print(f"DEBUG doc.predicates: {doc.predicates}")
-    # print(f"DEBUG doc.rules: {doc.rules}")
-    
-    for ent in doc.entities:
-        # Handle both object and tuple forms
-        if hasattr(ent, 'name'):
-            name = ent.name
-            type_name = ent.type_name
-        else:
-            # Assume it's a tuple or has different structure
-            name = str(ent[0]) if isinstance(ent, (list, tuple)) else str(ent)
-            type_name = str(ent[1]) if isinstance(ent, (list, tuple)) and len(ent) > 1 else "entity"
-        
+    # doc.entities is a dict: {name: Constant(entity=Entity, type=Type)}
+    for name, const in doc.entities.items():
+        type_name = const.type.name if hasattr(const.type, 'name') else str(const.type)
         kb.entities[name.lower()] = KBEntity(
             id=name.lower(),
             type=type_name,
             aliases=[name],
         )
     
+    # doc.predicates is a list
     for pred in doc.predicates:
         args = {}
         if hasattr(pred, 'arguments'):
             for arg in pred.arguments:
-                if hasattr(arg, 'role'):
-                    args[arg.role] = arg.value.lower() if hasattr(arg, 'value') else str(arg.value)
-        elif hasattr(pred, 'args'):
-            args = pred.args
+                role = arg.role if hasattr(arg, 'role') else str(arg[0])
+                value = arg.value if hasattr(arg, 'value') else str(arg[1])
+                args[role] = value.lower() if isinstance(value, str) else str(value)
         
         pred_name = pred.name if hasattr(pred, 'name') else str(pred)
         kb.facts.append(KBFact(predicate=pred_name, args=args))
     
+    # doc.rules is a list
     for rule in doc.rules:
+        # Variables
+        variables = []
         if hasattr(rule, 'variables'):
-            variables = [(v.name, v.type_name) if hasattr(v, 'name') else (str(v[0]), str(v[1])) for v in rule.variables]
-        else:
-            variables = []
+            for v in rule.variables:
+                v_name = v.name if hasattr(v, 'name') else str(v[0])
+                v_type = v.type_name if hasattr(v, 'type_name') else str(v[1])
+                variables.append((v_name, v_type))
         
         # Premise
+        prem_name = "unknown"
+        prem_args = {}
         if hasattr(rule, 'premise'):
             prem = rule.premise
             prem_name = prem.name if hasattr(prem, 'name') else str(prem)
-            prem_args = {}
             if hasattr(prem, 'arguments'):
                 for arg in prem.arguments:
-                    if hasattr(arg, 'role'):
-                        prem_args[arg.role] = arg.value if hasattr(arg, 'value') else str(arg)
-        else:
-            prem_name = "unknown"
-            prem_args = {}
+                    role = arg.role if hasattr(arg, 'role') else str(arg[0])
+                    value = arg.value if hasattr(arg, 'value') else str(arg[1])
+                    prem_args[role] = value
         
         # Conclusion
+        conc_name = "unknown"
+        conc_args = {}
         if hasattr(rule, 'conclusion'):
             conc = rule.conclusion
             conc_name = conc.name if hasattr(conc, 'name') else str(conc)
-            conc_args = {}
             if hasattr(conc, 'arguments'):
                 for arg in conc.arguments:
-                    if hasattr(arg, 'role'):
-                        conc_args[arg.role] = arg.value if hasattr(arg, 'value') else str(arg)
-        else:
-            conc_name = "unknown"
-            conc_args = {}
+                    role = arg.role if hasattr(arg, 'role') else str(arg[0])
+                    value = arg.value if hasattr(arg, 'value') else str(arg[1])
+                    conc_args[role] = value
         
         weight = rule.weight if hasattr(rule, 'weight') else 1.0
         
