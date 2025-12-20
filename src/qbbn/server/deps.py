@@ -1,0 +1,25 @@
+"""
+Shared dependencies for routes.
+"""
+
+import redis
+from openai import OpenAI
+
+from qbbn.core.document import DocumentStore
+from qbbn.core.run import RunStore
+
+
+def get_redis(db: int = 0):
+    return redis.Redis(host="localhost", port=6379, db=db)
+
+
+def get_doc_store(db: int = 0) -> DocumentStore:
+    return DocumentStore(get_redis(db))
+
+
+def get_run_store(db: int = 0) -> RunStore:
+    return RunStore(get_redis(db))
+
+
+def get_openai() -> OpenAI:
+    return OpenAI()
