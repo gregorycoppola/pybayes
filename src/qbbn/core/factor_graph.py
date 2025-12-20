@@ -336,25 +336,4 @@ def query(graph: FactorGraph, key: str) -> float:
     if key in graph.variables:
         return graph.variables[key].prob_true
     return 0.0
-```
-
-Now a simpler chain example:
-```
-# examples/chain.logic
-
-# Simple chain: a1 -> a2 -> a3 -> a4
-# Like Figure 6 in the paper
-
-entity x : node
-
-# Start of chain is true
-a1(n: x)
-
-# Chain rules
-rule []: a1(n: x) -> a2(n: x) [2.0]
-rule []: a2(n: x) -> a3(n: x) [2.0]
-rule []: a3(n: x) -> a4(n: x) [2.0]
-
-? a2(n: x)
-? a3(n: x)
-? a4(n: x)
+ a4(n: x)

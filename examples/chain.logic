@@ -1,17 +1,18 @@
 # examples/chain.logic
 
-# Simple chain from Figure 6
-# α₁ → α₂ → α₃
+# Simple chain: a1 -> a2 -> a3 -> a4
+# Like Figure 6 in the paper
 
-entity a : node
+entity x : node
 
-# We need 3 separate propositions to form a chain
-# Using a hack: different predicates
-alpha1(theme: a)
-# alpha2 and alpha3 start unknown
+# Start of chain is true
+a1(n: x)
 
-rule []: alpha1(theme: a) -> alpha2(theme: a) [0.8]
-rule []: alpha2(theme: a) -> alpha3(theme: a) [0.8]
+# Chain rules
+rule []: a1(n: x) -> a2(n: x) [2.0]
+rule []: a2(n: x) -> a3(n: x) [2.0]
+rule []: a3(n: x) -> a4(n: x) [2.0]
 
-? alpha2(theme: a)
-? alpha3(theme: a)
+? a2(n: x)
+? a3(n: x)
+? a4(n: x)
