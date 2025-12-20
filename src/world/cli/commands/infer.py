@@ -1,13 +1,13 @@
-# src/qbbn/cli/commands/infer.py
+# src/world/cli/commands/infer.py
 """
 Inference commands.
 """
 
 from pathlib import Path
 
-from qbbn.core.logical_lang import parse_logical, format_predicate, ParseError
-from qbbn.core.horn import KnowledgeBase
-from qbbn.core.factor_graph import FactorGraph, belief_propagation, query, BPTrace
+from world.core.logical_lang import parse_logical, format_predicate, ParseError
+from world.core.horn import KnowledgeBase
+from world.core.factor_graph import FactorGraph, belief_propagation, query, BPTrace
 
 
 def add_subparser(subparsers):

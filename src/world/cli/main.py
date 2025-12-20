@@ -3,11 +3,11 @@ QBBN CLI.
 """
 
 import argparse
-from qbbn.cli.commands import doc, kb, run, layer
+from world.cli.commands import doc, kb, run, layer
 
 
 def main():
-    parser = argparse.ArgumentParser(prog="qbbn", description="QBBN CLI")
+    parser = argparse.ArgumentParser(prog="world", description="QBBN CLI")
     subparsers = parser.add_subparsers(dest="command")
     
     doc.add_subparser(subparsers)

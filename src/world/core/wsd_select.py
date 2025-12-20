@@ -1,11 +1,11 @@
-# src/qbbn/core/wsd_select.py
+# src/world/core/wsd_select.py
 """
 WSD Step 1: Given a token and existing senses, pick one or say 'add'.
 """
 
 from openai import OpenAI
 
-from qbbn.core.lexicon import Sense
+from world.core.lexicon import Sense
 
 
 SYSTEM_PROMPT = """You are a word sense disambiguation system.

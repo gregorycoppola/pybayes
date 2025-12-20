@@ -1,4 +1,4 @@
-# src/qbbn/core/logical_lang.py
+# src/world/core/logical_lang.py
 """
 A simple DSL that compiles to our logical primitives.
 
@@ -12,7 +12,7 @@ Syntax:
 import re
 from dataclasses import dataclass, field
 
-from qbbn.core.logic import (
+from world.core.logic import (
     Type, RoleLabel, Entity, Constant, Variable, Predicate
 )
 

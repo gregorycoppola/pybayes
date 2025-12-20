@@ -3,7 +3,7 @@ Coreference layer - link coreferent mentions across sentences.
 """
 
 import json
-from qbbn.core.layers import Layer, LayerResult, register_layer
+from world.core.layers import Layer, LayerResult, register_layer
 
 
 COREF_PROMPT = """Identify coreference links in these sentences.

@@ -1,4 +1,4 @@
-# src/qbbn/core/analyze_verb.py
+# src/world/core/analyze_verb.py
 """
 Step 1: Find main verb, tense, aspect, mood.
 """
@@ -6,7 +6,7 @@ Step 1: Find main verb, tense, aspect, mood.
 import json
 from openai import OpenAI
 
-from qbbn.core.analysis import SentenceAnalysis, Tense, Aspect, Mood
+from world.core.analysis import SentenceAnalysis, Tense, Aspect, Mood
 
 
 SYSTEM_PROMPT = """You are a syntactic analyzer.

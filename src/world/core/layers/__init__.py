@@ -1,4 +1,4 @@
-# src/qbbn/core/layers/__init__.py
+# src/world/core/layers/__init__.py
 """
 Layer-based processing architecture.
 

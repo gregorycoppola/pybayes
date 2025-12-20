@@ -1,4 +1,4 @@
-# src/qbbn/core/sentence_lang.py
+# src/world/core/sentence_lang.py
 """
 DSL for sentence structure representation.
 

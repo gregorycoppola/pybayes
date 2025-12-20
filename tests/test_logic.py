@@ -3,7 +3,7 @@
 
 import pytest
 
-from qbbn.core.logic import (
+from world.core.logic import (
     Type, RoleLabel, Entity,
     Constant, Variable,
     Predicate,

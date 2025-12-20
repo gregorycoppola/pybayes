@@ -147,10 +147,10 @@ class KBStore:
         self.client = client
     
     def _kb_key(self, kb_id: str) -> str:
-        return f"qbbn:kb:{kb_id}"
+        return f"world:kb:{kb_id}"
     
     def _kb_list_key(self) -> str:
-        return "qbbn:kbs"
+        return "world:kbs"
     
     def create(self, name: str, dsl_text: str) -> str:
         """Create KB from DSL text, returns kb_id."""
@@ -203,7 +203,7 @@ def _extract_value(term) -> str:
 
 def _parse_dsl_into_kb(kb: KnowledgeBase, text: str):
     """Parse .logic DSL and populate KB."""
-    from qbbn.core.logical_lang import parse_logical
+    from world.core.logical_lang import parse_logical
     
     try:
         doc = parse_logical(text)

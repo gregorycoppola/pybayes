@@ -1,11 +1,11 @@
-# src/qbbn/core/inference.py
+# src/world/core/inference.py
 """
 Inference for QBBN (Section 7).
 
 Forward chaining: if premises true, conclusion becomes more likely.
 """
 
-from qbbn.core.proposition_graph import PropositionGraph
+from world.core.proposition_graph import PropositionGraph
 
 
 def forward_chain(graph: PropositionGraph, iterations: int = 10) -> None:
@@ -43,7 +43,7 @@ def forward_chain(graph: PropositionGraph, iterations: int = 10) -> None:
 
 def query(graph: PropositionGraph, pred) -> float:
     """Query the probability of a predicate."""
-    from qbbn.core.logical_lang import format_predicate
+    from world.core.logical_lang import format_predicate
     key = format_predicate(pred)
     if key in graph.propositions:
         return graph.propositions[key].prob_true

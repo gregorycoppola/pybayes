@@ -1,10 +1,10 @@
-# src/qbbn/core/translate.py
+# src/world/core/translate.py
 """
 Translate SentenceAnalysis to Predicate (logical form).
 """
 
-from qbbn.core.analysis import SentenceAnalysis, Argument as SynArg, ArgType
-from qbbn.core.logic import Predicate, RoleLabel, Constant, Entity, Type
+from world.core.analysis import SentenceAnalysis, Argument as SynArg, ArgType
+from world.core.logic import Predicate, RoleLabel, Constant, Entity, Type
 
 
 def translate_np(tokens: list[str], arg: SynArg, senses: list[str] | None) -> Constant:

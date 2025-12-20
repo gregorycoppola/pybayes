@@ -1,4 +1,4 @@
-# src/qbbn/core/lexicon.py
+# src/world/core/lexicon.py
 """
 Lexicon for word sense disambiguation.
 

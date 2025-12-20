@@ -1,4 +1,4 @@
-# src/qbbn/core/pipeline.py
+# src/world/core/pipeline.py
 """
 Pipeline for processing examples.
 """
@@ -9,9 +9,9 @@ from dataclasses import asdict
 
 import redis
 
-from qbbn.core.tokenize import tokenize, Token, SpellCorrector, CorrectedToken
-from qbbn.core.state import get_namespace
-from qbbn.core.analysis import SentenceAnalysis, TextAnalysis
+from world.core.tokenize import tokenize, Token, SpellCorrector, CorrectedToken
+from world.core.state import get_namespace
+from world.core.analysis import SentenceAnalysis, TextAnalysis
 
 
 def generate_id() -> str:
@@ -109,12 +109,12 @@ class Pipeline:
         return TextAnalysis.from_dict(json.loads(data.decode()))
 
     def store_predicates(self, example_id: str, predicates: list) -> None:
-        from qbbn.core.logic import Predicate
+        from world.core.logic import Predicate
         data = [p.to_dict() for p in predicates]
         self.client.set(self._key(example_id, "predicates"), json.dumps(data))
 
     def get_predicates(self, example_id: str) -> list | None:
-        from qbbn.core.logic import Predicate
+        from world.core.logic import Predicate
         data = self.client.get(self._key(example_id, "predicates"))
         if data is None:
             return None

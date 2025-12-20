@@ -1,4 +1,4 @@
-# src/qbbn/core/processors.py
+# src/world/core/processors.py
 """
 Processor registry and base class.
 """
@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import redis
 from openai import OpenAI
 
-from qbbn.core.document import DocumentStore
+from world.core.document import DocumentStore
 
 
 @dataclass

@@ -1,4 +1,4 @@
-# src/qbbn/core/state.py
+# src/world/core/state.py
 """
 Global state stored in Redis.
 """
@@ -6,7 +6,7 @@ Global state stored in Redis.
 import redis
 
 
-STATE_KEY = "qbbn:state:namespace"
+STATE_KEY = "world:state:namespace"
 DEFAULT_NAMESPACE = "default"
 
 

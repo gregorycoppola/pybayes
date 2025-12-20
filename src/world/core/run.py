@@ -43,13 +43,13 @@ class RunStore:
         self.client = client
     
     def _run_key(self, run_id: str) -> str:
-        return f"qbbn:run:{run_id}"
+        return f"world:run:{run_id}"
     
     def _run_data_key(self, run_id: str, layer_id: str) -> str:
-        return f"qbbn:run:{run_id}:data:{layer_id}"
+        return f"world:run:{run_id}:data:{layer_id}"
     
     def _doc_runs_key(self, doc_id: str) -> str:
-        return f"qbbn:doc:{doc_id}:runs"
+        return f"world:doc:{doc_id}:runs"
     
     def create(self, doc_id: str, kb_id: str, parent_run_id: str | None = None) -> str:
         """Create a new run, returns run_id."""
@@ -72,7 +72,7 @@ class RunStore:
         return run_id
     
     def _copy_layer_data(self, from_run_id: str, to_run_id: str):
-        pattern = f"qbbn:run:{from_run_id}:data:*"
+        pattern = f"world:run:{from_run_id}:data:*"
         for key in self.client.scan_iter(match=pattern):
             layer_id = key.decode().split(":")[-1]
             data = self.client.get(key)

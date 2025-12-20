@@ -2,7 +2,7 @@
 Layer execution runner - works on runs with KB from store.
 """
 
-from qbbn.core.layers import get_layer, resolve_dependencies, LayerResult
+from world.core.layers import get_layer, resolve_dependencies, LayerResult
 
 
 class LayerRunner:

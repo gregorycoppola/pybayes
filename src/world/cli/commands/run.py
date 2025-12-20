@@ -3,7 +3,7 @@ Run commands.
 """
 
 import sys
-from qbbn.cli import client
+from world.cli import client
 
 
 def add_subparser(subparsers):

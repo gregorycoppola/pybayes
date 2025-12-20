@@ -1,4 +1,4 @@
-# src/qbbn/core/analysis.py
+# src/world/core/analysis.py
 """
 SentenceAnalysis - purely syntactic, recursive structure.
 """

@@ -2,7 +2,7 @@
 Link layer - connects discourse entities to knowledge base entities.
 """
 
-from qbbn.core.layers import Layer, LayerResult, register_layer
+from world.core.layers import Layer, LayerResult, register_layer
 
 
 class LinkLayer(Layer):

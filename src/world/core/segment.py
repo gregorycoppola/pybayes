@@ -1,4 +1,4 @@
-# src/qbbn/core/segment.py
+# src/world/core/segment.py
 """
 Segment text into sentences.
 """

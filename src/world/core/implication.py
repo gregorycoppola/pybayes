@@ -1,11 +1,11 @@
-# src/qbbn/core/implication.py
+# src/world/core/implication.py
 """
 Implication structures for QBBN.
 """
 
 from dataclasses import dataclass
 
-from qbbn.core.logic import Predicate, Variable
+from world.core.logic import Predicate, Variable
 
 
 @dataclass
@@ -31,7 +31,7 @@ class ImplicationLink:
     
     @classmethod
     def from_dict(cls, d: dict) -> "ImplicationLink":
-        from qbbn.core.logic import Type
+        from world.core.logic import Type
         return cls(
             premise=Predicate.from_dict(d["premise"]),
             conclusion=Predicate.from_dict(d["conclusion"]),

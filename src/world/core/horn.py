@@ -1,4 +1,4 @@
-# src/qbbn/core/horn.py
+# src/world/core/horn.py
 """
 Horn clauses for QBBN.
 """
@@ -6,7 +6,7 @@ Horn clauses for QBBN.
 from dataclasses import dataclass
 from itertools import product
 
-from qbbn.core.logic import (
+from world.core.logic import (
     Type, Constant, Variable, Predicate
 )
 
@@ -45,7 +45,7 @@ class HornClause:
     
     @classmethod
     def from_dict(cls, d: dict) -> "HornClause":
-        from qbbn.core.logic import Type
+        from world.core.logic import Type
         premises = tuple(Predicate.from_dict(p) for p in d["premises"])
         conclusion = Predicate.from_dict(d["conclusion"])
         variables = tuple(Variable(Type(v["type"]), v["name"]) for v in d["variables"])
@@ -134,7 +134,7 @@ class KnowledgeBase:
 
 
 def format_horn_clause(clause: HornClause, show_vars: bool = True) -> str:
-    from qbbn.core.logical_lang import format_predicate
+    from world.core.logical_lang import format_predicate
     
     if clause.is_fact:
         return format_predicate(clause.conclusion)

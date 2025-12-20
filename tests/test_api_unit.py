@@ -4,7 +4,7 @@ Unit tests using FastAPI TestClient (no separate server needed).
 
 import pytest
 from fastapi.testclient import TestClient
-from qbbn.server.main import app
+from world.server.main import app
 
 
 @pytest.fixture

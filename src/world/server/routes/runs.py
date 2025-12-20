@@ -5,9 +5,9 @@ Run routes: /api/runs
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from qbbn.core.layers import list_layers, get_layer
-from qbbn.core.layers.runner import LayerRunner
-from qbbn.server.deps import get_doc_store, get_run_store, get_kb_store, get_openai
+from world.core.layers import list_layers, get_layer
+from world.core.layers.runner import LayerRunner
+from world.server.deps import get_doc_store, get_run_store, get_kb_store, get_openai
 
 
 router = APIRouter(prefix="/api/runs", tags=["runs"])

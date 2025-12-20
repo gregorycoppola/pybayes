@@ -3,7 +3,7 @@ Entities layer - identify named entities, types, and quantifiers.
 """
 
 import json
-from qbbn.core.layers import Layer, LayerResult, register_layer
+from world.core.layers import Layer, LayerResult, register_layer
 
 
 ENTITIES_PROMPT = """Identify entities, types, and quantifiers in these sentences.

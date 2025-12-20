@@ -1,4 +1,4 @@
-# src/qbbn/core/factor_graph.py
+# src/world/core/factor_graph.py
 """
 Factor Graph for QBBN (Section 6-7).
 """
@@ -9,8 +9,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
 
-from qbbn.core.horn import HornClause, KnowledgeBase
-from qbbn.core.logical_lang import format_predicate
+from world.core.horn import HornClause, KnowledgeBase
+from world.core.logical_lang import format_predicate
 
 
 @dataclass

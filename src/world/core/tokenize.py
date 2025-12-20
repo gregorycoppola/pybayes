@@ -1,4 +1,4 @@
-# src/qbbn/core/tokenize.py
+# src/world/core/tokenize.py
 """
 Tokenization and spell correction pipeline.
 

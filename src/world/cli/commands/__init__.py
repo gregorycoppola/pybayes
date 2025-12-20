@@ -1,2 +1,2 @@
-# src/qbbn/cli/commands/__init__.py
-"""Command modules for qbbn CLI."""
+# src/world/cli/commands/__init__.py
+"""Command modules for world CLI."""

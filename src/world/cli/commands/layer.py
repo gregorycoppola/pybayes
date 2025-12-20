@@ -4,7 +4,7 @@ Layer commands - via API.
 
 import sys
 from pathlib import Path
-from qbbn.cli import client
+from world.cli import client
 
 
 def add_subparser(subparsers):

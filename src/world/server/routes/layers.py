@@ -4,7 +4,7 @@ Layer routes: /api/layers
 
 from fastapi import APIRouter
 
-from qbbn.core.layers import list_layers, get_layer
+from world.core.layers import list_layers, get_layer
 
 
 router = APIRouter(prefix="/api/layers", tags=["layers"])

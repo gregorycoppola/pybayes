@@ -5,7 +5,7 @@ Knowledge Base routes: /api/kbs
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from qbbn.server.deps import get_kb_store
+from world.server.deps import get_kb_store
 
 
 router = APIRouter(prefix="/api/kbs", tags=["kbs"])

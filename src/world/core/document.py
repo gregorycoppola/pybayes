@@ -1,4 +1,4 @@
-# src/qbbn/core/document.py
+# src/world/core/document.py
 """
 Document storage and retrieval.
 """
@@ -10,7 +10,7 @@ from datetime import datetime
 
 import redis
 
-from qbbn.core.state import get_namespace
+from world.core.state import get_namespace
 
 
 def generate_id() -> str:

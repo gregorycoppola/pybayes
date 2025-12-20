@@ -2,7 +2,7 @@
 Ground layer - expand rules with entity bindings using KB.
 """
 
-from qbbn.core.layers import Layer, LayerResult, register_layer
+from world.core.layers import Layer, LayerResult, register_layer
 
 
 class GroundLayer(Layer):
@@ -73,8 +73,8 @@ class GroundLayer(Layer):
             
             combined_text = "\n".join(combined_lines)
             
-            from qbbn.core.logical_lang import parse_logical
-            from qbbn.core.horn import KnowledgeBase as HornKB, format_horn_clause
+            from world.core.logical_lang import parse_logical
+            from world.core.horn import KnowledgeBase as HornKB, format_horn_clause
             
             doc = parse_logical(combined_text)
             horn_kb = HornKB.from_logical_document(doc)

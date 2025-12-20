@@ -1,4 +1,4 @@
-# src/qbbn/cli/commands/plot.py
+# src/world/cli/commands/plot.py
 """Plot BP convergence from CSV."""
 
 import sys

@@ -3,7 +3,7 @@ Clauses layer - identify clause boundaries per sentence.
 """
 
 import json
-from qbbn.core.layers import Layer, LayerResult, register_layer
+from world.core.layers import Layer, LayerResult, register_layer
 
 
 CLAUSE_PROMPT = """Identify all clauses in this sentence.

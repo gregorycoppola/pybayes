@@ -8,17 +8,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.routing import APIRoute
 
 # Import layers to register them
-import qbbn.core.layers.base
-import qbbn.core.layers.clauses
-import qbbn.core.layers.args
-import qbbn.core.layers.coref
-import qbbn.core.layers.entities
-import qbbn.core.layers.link
-import qbbn.core.layers.logic
-import qbbn.core.layers.ground
+import world.core.layers.base
+import world.core.layers.clauses
+import world.core.layers.args
+import world.core.layers.coref
+import world.core.layers.entities
+import world.core.layers.link
+import world.core.layers.logic
+import world.core.layers.ground
 
 # Import routers
-from qbbn.server.routes import docs, runs, layers, kbs
+from world.server.routes import docs, runs, layers, kbs
 
 
 def print_routes(app: FastAPI):

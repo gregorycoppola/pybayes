@@ -1,4 +1,4 @@
-# src/qbbn/core/analyze_implication.py
+# src/world/core/analyze_implication.py
 """
 Analyze a sentence to detect if it's an implication.
 """

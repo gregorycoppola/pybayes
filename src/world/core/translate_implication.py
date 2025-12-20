@@ -1,14 +1,14 @@
-# src/qbbn/core/translate_implication.py
+# src/world/core/translate_implication.py
 """
 Translate implication analysis to ImplicationLink.
 """
 
-from qbbn.core.analysis import SentenceAnalysis
-from qbbn.core.analyze_implication import ImplicationStructure
-from qbbn.core.analyze_verb import analyze_verb
-from qbbn.core.analyze_args import analyze_args
-from qbbn.core.implication import ImplicationLink
-from qbbn.core.logic import Predicate, Variable, RoleLabel, Type
+from world.core.analysis import SentenceAnalysis
+from world.core.analyze_implication import ImplicationStructure
+from world.core.analyze_verb import analyze_verb
+from world.core.analyze_args import analyze_args
+from world.core.implication import ImplicationLink
+from world.core.logic import Predicate, Variable, RoleLabel, Type
 
 from openai import OpenAI
 
@@ -65,7 +65,7 @@ def analysis_to_predicate_with_vars(
     """
     Convert analysis to predicate, using variables where coreferences exist.
     """
-    from qbbn.core.logic import Constant, Entity
+    from world.core.logic import Constant, Entity
     
     if analysis.verb_index is None:
         raise ValueError("No verb in analysis")

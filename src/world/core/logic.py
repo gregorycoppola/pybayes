@@ -1,4 +1,4 @@
-# src/qbbn/core/logic.py
+# src/world/core/logic.py
 """
 Core logical primitives for QBBN.
 

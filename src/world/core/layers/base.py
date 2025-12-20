@@ -8,8 +8,8 @@ Every token is addressable as (sentence_idx, token_idx).
 """
 
 import json
-from qbbn.core.layers import Layer, LayerResult, register_layer
-from qbbn.core.tokenize import tokenize, Token, SpellCorrector
+from world.core.layers import Layer, LayerResult, register_layer
+from world.core.tokenize import tokenize, Token, SpellCorrector
 
 
 SEGMENT_PROMPT = """You are a sentence segmenter.

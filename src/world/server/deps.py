@@ -5,9 +5,9 @@ Shared dependencies for routes.
 import redis
 from openai import OpenAI
 
-from qbbn.core.document import DocumentStore
-from qbbn.core.run import RunStore
-from qbbn.core.kb import KBStore
+from world.core.document import DocumentStore
+from world.core.run import RunStore
+from world.core.kb import KBStore
 
 
 def get_redis(db: int = 0):

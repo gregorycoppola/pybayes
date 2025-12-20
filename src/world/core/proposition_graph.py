@@ -1,4 +1,4 @@
-# src/qbbn/core/proposition_graph.py
+# src/world/core/proposition_graph.py
 """
 Proposition Graph for QBBN (Section 5).
 
@@ -10,9 +10,9 @@ Edges connect conjunction nodes to their conclusion propositions.
 """
 
 from dataclasses import dataclass, field
-from qbbn.core.logic import Predicate
-from qbbn.core.horn import HornClause, KnowledgeBase
-from qbbn.core.logical_lang import format_predicate
+from world.core.logic import Predicate
+from world.core.horn import HornClause, KnowledgeBase
+from world.core.logical_lang import format_predicate
 
 
 @dataclass

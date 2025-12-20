@@ -1,4 +1,4 @@
-# src/qbbn/core/analyze_args.py
+# src/world/core/analyze_args.py
 """
 Step 2: Find arguments and their syntactic types.
 Handles recursive sentence arguments.
@@ -7,7 +7,7 @@ Handles recursive sentence arguments.
 import json
 from openai import OpenAI
 
-from qbbn.core.analysis import SentenceAnalysis, Argument, ArgType
+from world.core.analysis import SentenceAnalysis, Argument, ArgType
 
 
 SYSTEM_PROMPT = """You are a syntactic argument identifier.
@@ -98,7 +98,7 @@ def analyze_args(
             # Get the nested tokens (use relative indices on the current tokens slice)
             nested_tokens = tokens[a["start"]:a["end"]]
             if nested_tokens:
-                from qbbn.core.analyze_verb import analyze_verb
+                from world.core.analyze_verb import analyze_verb
                 # Pass absolute offset for the nested analysis
                 nested = analyze_verb(nested_tokens, arg_start_abs, client)
                 nested = analyze_args(nested_tokens, nested, client, recursive=True)

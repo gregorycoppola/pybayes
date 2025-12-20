@@ -2,7 +2,7 @@
 Logic layer - translate syntax to logical form, using KB links when available.
 """
 
-from qbbn.core.layers import Layer, LayerResult, register_layer
+from world.core.layers import Layer, LayerResult, register_layer
 
 
 class LogicLayer(Layer):

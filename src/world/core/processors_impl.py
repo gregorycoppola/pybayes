@@ -1,12 +1,12 @@
-# src/qbbn/core/processors_impl.py
+# src/world/core/processors_impl.py
 """
 Processor implementations.
 """
 
 import json
 import re
-from qbbn.core.processors import Processor, ProcessorResult, register
-from qbbn.core.tokenize import tokenize as do_tokenize
+from world.core.processors import Processor, ProcessorResult, register
+from world.core.tokenize import tokenize as do_tokenize
 
 
 @register
@@ -32,7 +32,7 @@ class CorrectProcessor(Processor):
     requires = ["tokenize"]
     
     def process(self, doc_id: str) -> ProcessorResult:
-        from qbbn.core.tokenize import Token, SpellCorrector
+        from world.core.tokenize import Token, SpellCorrector
         
         token_data = self.store.get_data(doc_id, "tokenize")
         tokens = [Token(**t) for t in token_data]

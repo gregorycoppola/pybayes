@@ -3,7 +3,7 @@ Arguments layer - identify verb arguments per clause per sentence.
 """
 
 import json
-from qbbn.core.layers import Layer, LayerResult, register_layer
+from world.core.layers import Layer, LayerResult, register_layer
 
 
 ARG_PROMPT = """Identify arguments of the verb.

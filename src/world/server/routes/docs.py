@@ -5,7 +5,7 @@ Document routes: /api/docs
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from qbbn.server.deps import get_doc_store, get_run_store
+from world.server.deps import get_doc_store, get_run_store
 
 
 router = APIRouter(prefix="/api/docs", tags=["docs"])

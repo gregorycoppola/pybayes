@@ -1,4 +1,4 @@
-# src/qbbn/core/wsd_define.py
+# src/world/core/wsd_define.py
 """
 WSD Step 2: Define a new sense for a token.
 """
