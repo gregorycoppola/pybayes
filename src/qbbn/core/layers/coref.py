@@ -1,44 +1,52 @@
-# src/qbbn/core/layers/coref.py
 """
-Coreference layer - link coreferent mentions.
+Coreference layer - link coreferent mentions across sentences.
 """
 
 import json
 from qbbn.core.layers import Layer, LayerResult, register_layer
 
 
-COREF_PROMPT = """Identify coreference links in this sentence.
+COREF_PROMPT = """Identify coreference links in these sentences.
 
 Coreference: two mentions that refer to the same entity.
+Use (sentence_idx, token_idx) pairs.
 
 For "If someone is a man then they are mortal":
-- "someone" (index 1) and "they" (index 6) refer to the same person
+- "someone" at (0, 1) and "they" at (0, 6) refer to same person
 
 Reply JSON:
 {
   "coreferences": [
-    {"index_a": 1, "index_b": 6}
+    {"a": [0, 1], "b": [0, 6]}
   ]
 }
 
-Only include clear coreferences. Empty list if none.
+Each entry has "a" and "b" as [sentence_idx, token_idx] pairs.
+Empty list if no coreferences.
 """
 
 
 class CorefLayer(Layer):
     id = "coref"
-    depends_on = ["correct", "clauses"]
+    depends_on = ["base"]
     ext = ".coref"
     
     def process(self, inputs: dict, context: dict) -> LayerResult:
-        correct_data = inputs.get("correct", [])
-        tokens = [c["corrected"] for c in correct_data]
+        base_data = inputs.get("base", {})
+        sentences = base_data.get("sentences", [])
         
         openai = context.get("openai")
         if not openai:
             return LayerResult(False, None, "no openai client")
         
-        prompt = "Tokens:\n" + "\n".join(f"{i}: {t}" for i, t in enumerate(tokens))
+        # Build prompt with all sentences
+        prompt_lines = []
+        for sent in sentences:
+            prompt_lines.append(f"Sentence {sent['idx']}:")
+            for tok in sent["tokens"]:
+                prompt_lines.append(f"  ({sent['idx']}, {tok['idx']}): {tok['text']}")
+        
+        prompt = "\n".join(prompt_lines)
         
         response = openai.chat.completions.create(
             model="gpt-4o-mini",
@@ -57,20 +65,23 @@ class CorefLayer(Layer):
     def parse_dsl(self, text: str) -> dict:
         """
         Parse:
-        1 = 6
-        3 = 8
+        (0, 1) = (0, 6)
+        (0, 3) = (1, 0)
         """
+        import re
         coreferences = []
+        
         for line in text.strip().split("\n"):
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
             
-            if "=" in line:
-                a, b = line.split("=")
+            match = re.match(r"\((\d+),\s*(\d+)\)\s*=\s*\((\d+),\s*(\d+)\)", line)
+            if match:
+                s1, t1, s2, t2 = match.groups()
                 coreferences.append({
-                    "index_a": int(a.strip()),
-                    "index_b": int(b.strip()),
+                    "a": [int(s1), int(t1)],
+                    "b": [int(s2), int(t2)],
                 })
         
         return {"coreferences": coreferences}
@@ -78,7 +89,9 @@ class CorefLayer(Layer):
     def format_dsl(self, data: dict) -> str:
         lines = []
         for c in data.get("coreferences", []):
-            lines.append(f"{c['index_a']} = {c['index_b']}")
+            a = c["a"]
+            b = c["b"]
+            lines.append(f"({a[0]}, {a[1]}) = ({b[0]}, {b[1]})")
         return "\n".join(lines) if lines else "# no coreferences"
 
 

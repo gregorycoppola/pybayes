@@ -1,11 +1,8 @@
-# src/qbbn/core/layers/ground.py
 """
 Ground layer - expand rules with entity bindings.
 """
 
 from qbbn.core.layers import Layer, LayerResult, register_layer
-from qbbn.core.logical_lang import parse_logical
-from qbbn.core.horn import KnowledgeBase, format_horn_clause
 
 
 class GroundLayer(Layer):
@@ -21,11 +18,13 @@ class GroundLayer(Layer):
             return LayerResult(False, None, "no logic text")
         
         try:
+            from qbbn.core.logical_lang import parse_logical
+            from qbbn.core.horn import KnowledgeBase, format_horn_clause
+            
             doc = parse_logical(logic_text)
             kb = KnowledgeBase.from_logical_document(doc)
             grounded = kb.ground_all()
             
-            # Format grounded clauses
             lines = []
             for clause in grounded:
                 lines.append(format_horn_clause(clause, show_vars=False))
@@ -39,7 +38,6 @@ class GroundLayer(Layer):
             return LayerResult(False, None, f"parse error: {e}")
     
     def parse_dsl(self, text: str) -> dict:
-        """Store raw text."""
         return {"text": text}
     
     def format_dsl(self, data: dict) -> str:

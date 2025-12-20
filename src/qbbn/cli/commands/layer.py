@@ -1,4 +1,3 @@
-# src/qbbn/cli/commands/layer.py
 """
 Layer management commands.
 """
@@ -8,13 +7,11 @@ from pathlib import Path
 from openai import OpenAI
 
 from qbbn.core.document import DocumentStore
-from qbbn.core.layers import list_layers, get_layer, resolve_dependencies, LAYERS
+from qbbn.core.layers import list_layers, get_layer, resolve_dependencies
 from qbbn.core.layers.runner import LayerRunner
 
 # Import all layers to register them
-import qbbn.core.layers.tokens
-import qbbn.core.layers.correct
-import qbbn.core.layers.segments
+import qbbn.core.layers.base
 import qbbn.core.layers.clauses
 import qbbn.core.layers.args
 import qbbn.core.layers.coref
@@ -44,6 +41,12 @@ def add_subparser(subparsers):
     show_p.add_argument("layer_id", help="Layer ID")
     show_p.add_argument("--db", type=int, default=0)
     show_p.set_defaults(func=layer_show)
+    
+    # show-all
+    showall_p = layer_sub.add_parser("show-all", help="Show all layer data for a document")
+    showall_p.add_argument("doc_id", help="Document ID")
+    showall_p.add_argument("--db", type=int, default=0)
+    showall_p.set_defaults(func=layer_show_all)
     
     # set
     set_p = layer_sub.add_parser("set", help="Set layer override from file")
@@ -86,7 +89,6 @@ def layer_run(args):
     print(f"Text: {doc.text[:60]}{'...' if len(doc.text) > 60 else ''}")
     print()
     
-    # Show what will run
     all_layers = resolve_dependencies(args.layers)
     print(f"Layers to run: {' → '.join(all_layers)}")
     print()
@@ -117,6 +119,30 @@ def layer_show(args):
     print(dsl)
 
 
+def layer_show_all(args):
+    client = redis.Redis(host="localhost", port=6379, db=args.db)
+    store = DocumentStore(client)
+    
+    doc = store.get(args.doc_id)
+    if not doc:
+        print(f"Document not found: {args.doc_id}")
+        return
+    
+    print(f"# Document: {args.doc_id}")
+    print(f"# Text: {doc.text}")
+    print()
+    
+    runner = LayerRunner(store, {})
+    
+    for lid in list_layers():
+        dsl = runner.get_dsl(args.doc_id, lid)
+        if dsl is not None:
+            layer = get_layer(lid)
+            print(f"=== {lid}{layer.ext} ===")
+            print(dsl)
+            print()
+
+
 def layer_set(args):
     client = redis.Redis(host="localhost", port=6379, db=args.db)
     store = DocumentStore(client)
@@ -144,6 +170,5 @@ def layer_clear(args):
     client = redis.Redis(host="localhost", port=6379, db=args.db)
     store = DocumentStore(client)
     
-    # Delete override
     store.delete_data(args.doc_id, f"{args.layer_id}_override")
     print(f"✓ Cleared override for {args.layer_id}")
