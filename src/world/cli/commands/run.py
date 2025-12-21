@@ -5,6 +5,8 @@ Run commands.
 import sys
 from world.cli import client
 
+FRONTEND_URL = "http://localhost:5173"
+
 
 def add_subparser(subparsers):
     parser = subparsers.add_parser("run", help="Annotation runs")
@@ -63,6 +65,9 @@ def run_create(args):
             for lid, r in proc_result["results"].items():
                 icon = "✓" if r["success"] else "✗"
                 print(f"{icon} {lid}: {r['message']}")
+        
+        print()
+        print(f"→ {FRONTEND_URL}/runs/{run_id}")
     except Exception as e:
         print(f"✗ Error: {e}")
         sys.exit(1)
@@ -76,6 +81,9 @@ def run_process(args):
         for lid, r in result["results"].items():
             icon = "✓" if r["success"] else "✗"
             print(f"{icon} {lid}: {r['message']}")
+        
+        print()
+        print(f"→ {FRONTEND_URL}/runs/{args.run_id}")
     except Exception as e:
         print(f"✗ Error: {e}")
         sys.exit(1)
@@ -96,6 +104,9 @@ def run_show(args):
         for lid, layer in run["layers"].items():
             icon = "✓" if layer["status"] == "done" else "○"
             print(f"  {icon} {lid}")
+        
+        print()
+        print(f"→ {FRONTEND_URL}/runs/{args.run_id}")
     except Exception as e:
         print(f"✗ Error: {e}")
         sys.exit(1)
