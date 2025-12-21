@@ -2,7 +2,7 @@
 
 A syntax and semantics parsing pipeline for world models.
 
-Parses natural language into logical forms, grounds them against entities, and runs Bayesian inference via belief propagation.
+Parses natural language into logical forms, grounds them against knowledge bases, and runs Bayesian inference via belief propagation.
 
 **By Super Sonic Vibes ✈️🪩✨**
 
@@ -14,90 +14,317 @@ An implementation of the **Quantified Boolean Bayesian Network (QBBN)** — a un
 
 The core idea: express knowledge as weighted logical rules, ground them over entities, build a factor graph, and run belief propagation to answer probabilistic queries.
 
-## Features
+## Installation
 
-- **Logical DSL** — Write rules like `man(x) -> mortal(x) [0.9]`
-- **Automatic grounding** — One rule with variables expands to all entity combinations
-- **Belief propagation** — Iterative message passing for probabilistic inference
-- **NLP pipeline** — Layer-based processing from text to logic (tokenize → clauses → args → coref → logic)
-- **FastAPI server** — JSON API for frontend consumption
-
-## Quick Start
 ```bash
 git clone https://github.com/gregorycoppola/world
 cd world
 uv sync
 ```
 
-## Examples
-
-**The Socrates syllogism:**
-```
-# examples/socrates.logic
-
-entity socrates : person
-
-man(theme: socrates)
-
-rule [x:person]: man(theme: x) -> mortal(theme: x)
-
-? mortal(theme: socrates)
-```
+Requires Redis for document/KB storage:
 ```bash
-uv run world infer examples/socrates.logic
+brew install redis
+brew services start redis
 ```
 
-**Dating with weights (Section 4.3.2 of the paper):**
-```
-# examples/dating_weighted.logic
+## CLI Overview
 
-entity jack : person
-entity jill : person
-
-lonely(theme: jack)
-exciting(theme: jill)
-like(agent: jill, theme: jack)
-
-rule [x:person, y:person]: lonely(theme: x) -> like(agent: x, theme: y) [0.3]
-rule [x:person, y:person]: exciting(theme: y) -> like(agent: x, theme: y) [0.5]
-rule [x:person, y:person]: like(agent: x, theme: y) & like(agent: y, theme: x) -> date(agent: x, theme: y) [0.9]
-
-? date(agent: jack, theme: jill)
-```
 ```bash
-uv run world infer examples/dating_weighted.logic -i 50
+world --help
 ```
 
-**Chain propagation (Figures 7-9):**
-```bash
-uv run world infer examples/chain.logic -i 30 --csv results/chain.csv
-python scripts/plot_convergence.py results/chain.csv
-```
+Four main commands:
+- `world doc` — Document management
+- `world kb` — Knowledge base management  
+- `world run` — Annotation runs (doc + KB)
+- `world layer` — Layer management
 
-## Architecture
-```
-src/world/
-  cli/              # Command-line interface
-  core/
-    logical_lang.py # Types, entities, predicates, propositions
-    horn.py         # Horn clauses and knowledge base
-    factor_graph.py # Factor graph construction
-    inference.py    # Belief propagation
-    layers/         # NLP processing pipeline
-  server/           # FastAPI JSON API
-```
+## Quick Start
 
-## API Server
+### 1. Start the API server
+
 ```bash
 uv run uvicorn world.server.main:app --reload
 ```
 
-Endpoints:
-- `GET /api/docs` — List documents
-- `GET /api/docs/{id}` — Get document with all layers
-- `POST /api/docs/{id}/layers/{layer}/run` — Run a processing layer
+### 2. Add a document
+
+```bash
+world doc add "If Socrates is a man then Socrates is mortal."
+# ✓ Created: 1bb2b620c3c4
+```
+
+### 3. Run all NLP layers
+
+```bash
+world layer run 1bb2b620c3c4 --all
+# ✓ base: 1 sentences, 10 tokens, 0 corrections
+# ✓ clauses: 2 clauses
+# ✓ args: 4 arguments
+# ✓ coref: 1 coreferences
+# ✓ entities: 2 entities, 2 types, 0 quantifiers
+```
+
+### 4. View the result
+
+```bash
+world doc json 1bb2b620c3c4
+```
+
+### 5. Add a knowledge base
+
+```bash
+world kb add examples/socrates/kb.logic --name socrates
+# ✓ Created KB: 6e668c60acc3
+```
+
+### 6. Create a run (doc + KB) and process
+
+```bash
+world run create 1bb2b620c3c4 6e668c60acc3
+# ✓ Created run: 836613b98efe
+# ✓ base: cached
+# ✓ clauses: cached
+# ...
+# ✓ link: 1 linked, 0 new
+# ✓ logic: generated
+# ✓ ground: grounded
+```
+
+## Document Commands
+
+```bash
+world doc add "Your text here"     # Add a new document
+world doc list                      # List all documents
+world doc show <doc_id>             # Show document metadata
+world doc json <doc_id>             # Show document with all layer data
+```
+
+## Knowledge Base Commands
+
+```bash
+world kb add <file.logic>           # Add KB from .logic file
+world kb add <file.logic> --name x  # Add with custom name
+world kb list                       # List all KBs
+world kb show <kb_id>               # Show KB details (entities, facts, rules)
+world kb dsl <kb_id>                # Export KB as DSL
+```
+
+## Layer Commands
+
+```bash
+world layer list                    # List all registered layers
+world layer run <doc_id> <layer>    # Run a specific layer
+world layer run <doc_id> --all      # Run all doc-level layers
+world layer run <doc_id> -a -f      # Force re-run all layers
+world layer show <doc_id> <layer>   # Show layer as DSL
+world layer json <doc_id> <layer>   # Show layer as JSON
+world layer set <doc_id> <layer> <file>  # Override layer from file
+world layer clear <doc_id> <layer>  # Clear layer override
+```
+
+## Run Commands
+
+Runs combine a document with a knowledge base for grounding and inference.
+
+```bash
+world run create <doc_id> <kb_id>   # Create and process a run
+world run create <doc_id> <kb_id> --no-process  # Create without processing
+world run list <doc_id>             # List runs for a document
+world run show <run_id>             # Show run info
+world run show-all <run_id>         # Show all layer DSLs for a run
+world run layer <run_id> <layer>    # Show specific layer DSL
+world run process <run_id>          # Process/re-process a run
+```
+
+## Layer Pipeline
+
+The NLP pipeline processes documents through these layers:
+
+### Doc-Level Layers (no KB required)
+
+| Layer | Depends On | Description |
+|-------|------------|-------------|
+| `base` | — | Tokenization, spell correction, sentence segmentation |
+| `clauses` | base | Identifies clause structure (antecedent/consequent for conditionals) |
+| `args` | base, clauses | Extracts verb arguments (agent, theme, etc.) |
+| `coref` | base | Coreference resolution (links mentions of same entity) |
+| `entities` | base | Named entity recognition and type extraction |
+
+### Run-Level Layers (require KB)
+
+| Layer | Depends On | Description |
+|-------|------------|-------------|
+| `link` | entities | Links document entities to KB entities |
+| `logic` | clauses, args, link | Generates logical propositions from text |
+| `ground` | logic, link, entities | Grounds rules over entities, builds factor graph |
+
+## File Formats
+
+### `.doc` — Document Input
+
+Plain text file containing natural language:
+
+```
+If Socrates is a man then Socrates is mortal.
+```
+
+### `.logic` — Knowledge Base DSL
+
+```
+# Entities
+entity socrates : person
+
+# Facts  
+man(who: socrates)
+
+# Rules (with optional weights)
+rule [x:person]: man(who: x) -> mortal(who: x)
+rule [x:person, y:person]: likes(who: x, whom: y) -> friends(a: x, b: y) [0.8]
+
+# Queries
+? mortal(who: socrates)
+```
+
+## Examples
+
+Example files are in `examples/`:
+
+```
+examples/
+  socrates/
+    input.doc       # "If Socrates is a man..."
+    kb.logic        # Entity + rule definitions
+  dating/
+    input.doc       # Jack/Jill dating scenario
+    kb.logic        # Relationship rules
+  weather/
+    input.doc       # Weather inference chain
+    kb.logic        # Causal rules
+```
+
+Run an example:
+
+```bash
+./scripts/parse "If Socrates is a man then Socrates is mortal."
+```
+
+Or with the run-example script:
+
+```bash
+./scripts/run-example socrates
+```
+
+## Direct Inference
+
+For standalone logical inference without the NLP pipeline:
+
+```bash
+uv run world infer examples/socrates.logic
+uv run world infer examples/dating_weighted.logic -i 50
+```
+
+## API Server
+
+```bash
+uv run uvicorn world.server.main:app --reload
+```
+
+### Document Endpoints
+
+```
+GET  /api/docs                           # List documents
+POST /api/docs                           # Create document
+GET  /api/docs/{id}                      # Get document
+DELETE /api/docs/{id}                    # Delete document
+POST /api/docs/{id}/layers/{layer}/run   # Run layer
+GET  /api/docs/{id}/layers/{layer}       # Get layer data (JSON)
+GET  /api/docs/{id}/layers/{layer}/dsl   # Get layer data (DSL)
+PUT  /api/docs/{id}/layers/{layer}       # Set layer override
+DELETE /api/docs/{id}/layers/{layer}/override  # Clear override
+```
+
+### Knowledge Base Endpoints
+
+```
+GET  /api/kbs                            # List KBs
+POST /api/kbs                            # Create KB
+GET  /api/kbs/{id}                       # Get KB
+GET  /api/kbs/{id}/dsl                   # Get KB as DSL
+DELETE /api/kbs/{id}                     # Delete KB
+```
+
+### Run Endpoints
+
+```
+GET  /api/docs/{doc_id}/runs             # List runs for doc
+POST /api/runs                           # Create run
+GET  /api/runs/{id}                      # Get run with all layer data
+POST /api/runs/{id}/process              # Process run
+GET  /api/runs/{id}/layers/{layer}/dsl   # Get run layer DSL
+```
+
+### Layer Endpoints
+
+```
+GET  /api/layers                         # List registered layers
+```
+
+## Architecture
+
+```
+src/world/
+  cli/
+    main.py              # Entry point
+    client.py            # HTTP client for API
+    commands/
+      doc.py             # Document commands
+      kb.py              # KB commands
+      run.py             # Run commands
+      layer.py           # Layer commands
+  core/
+    document.py          # Document storage
+    kb.py                # Knowledge base storage/parsing
+    run.py               # Run storage
+    logical_lang.py      # Types, entities, predicates
+    horn.py              # Horn clauses
+    factor_graph.py      # Factor graph construction
+    inference.py         # Belief propagation
+    layers/
+      __init__.py        # Layer base class, registry
+      runner.py          # Layer execution
+      base.py            # Tokenization + segmentation
+      clauses.py         # Clause extraction
+      args.py            # Argument extraction
+      coref.py           # Coreference resolution
+      entities.py        # Entity recognition
+      link.py            # KB linking
+      logic.py           # Logic generation
+      ground.py          # Grounding
+  server/
+    main.py              # FastAPI app
+    deps.py              # Dependencies (Redis, OpenAI)
+    routes/
+      docs.py            # Document routes
+      kbs.py             # KB routes
+      runs.py            # Run routes
+      layers.py          # Layer routes
+```
+
+## Environment
+
+Requires:
+- Python 3.11+
+- Redis
+- OpenAI API key (for NLP layers)
+
+```bash
+export OPENAI_API_KEY=sk-...
+```
 
 ## Citation
+
 ```bibtex
 @article{coppola2024qbbn,
   title={The Quantified Boolean Bayesian Network: Theory and Experiments with a Logical Graphical Model},
@@ -109,4 +336,4 @@ Endpoints:
 
 ## License
 
-Apache 2
+Apache 2.0
