@@ -27,6 +27,45 @@ def get_doc(doc_id: str) -> dict:
     return r.json()
 
 
+def delete_doc(doc_id: str) -> dict:
+    r = httpx.delete(f"{BASE_URL}/docs/{doc_id}")
+    r.raise_for_status()
+    return r.json()
+
+
+# === Layers (doc-level) ===
+
+def run_layer(doc_id: str, layer_id: str, force: bool = False) -> dict:
+    payload = {"force": force}
+    r = httpx.post(f"{BASE_URL}/docs/{doc_id}/layers/{layer_id}/run", json=payload, timeout=120)
+    r.raise_for_status()
+    return r.json()
+
+
+def get_layer_data(doc_id: str, layer_id: str) -> dict:
+    r = httpx.get(f"{BASE_URL}/docs/{doc_id}/layers/{layer_id}")
+    r.raise_for_status()
+    return r.json()
+
+
+def get_layer_dsl(doc_id: str, layer_id: str) -> dict:
+    r = httpx.get(f"{BASE_URL}/docs/{doc_id}/layers/{layer_id}/dsl")
+    r.raise_for_status()
+    return r.json()
+
+
+def set_layer_override(doc_id: str, layer_id: str, dsl: str) -> dict:
+    r = httpx.put(f"{BASE_URL}/docs/{doc_id}/layers/{layer_id}", json={"dsl": dsl})
+    r.raise_for_status()
+    return r.json()
+
+
+def clear_layer_override(doc_id: str, layer_id: str) -> dict:
+    r = httpx.delete(f"{BASE_URL}/docs/{doc_id}/layers/{layer_id}/override")
+    r.raise_for_status()
+    return r.json()
+
+
 # === KBs ===
 
 def create_kb(name: str, dsl: str) -> dict:
