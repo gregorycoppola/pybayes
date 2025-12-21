@@ -20,7 +20,8 @@ def add_subparser(subparsers):
     # run
     run_p = layer_sub.add_parser("run", help="Run a layer on a document")
     run_p.add_argument("doc_id", help="Document ID")
-    run_p.add_argument("layer_id", help="Layer ID")
+    run_p.add_argument("layer_id", nargs="?", help="Layer ID (or --all)")
+    run_p.add_argument("--all", "-a", action="store_true", help="Run all doc-level layers")
     run_p.add_argument("--force", "-f", action="store_true", help="Force re-run")
     run_p.set_defaults(func=layer_run)
     
@@ -50,6 +51,10 @@ def add_subparser(subparsers):
     clear_p.set_defaults(func=layer_clear)
 
 
+# Doc-level layers (don't need KB)
+DOC_LAYERS = ["base", "clauses", "args", "coref", "entities"]
+
+
 def layer_list(args):
     try:
         layers = client.list_layers()
@@ -66,10 +71,20 @@ def layer_list(args):
 
 
 def layer_run(args):
+    if not args.layer_id and not args.all:
+        print("✗ Error: specify layer_id or --all")
+        sys.exit(1)
+    
+    if args.all:
+        layers_to_run = DOC_LAYERS
+    else:
+        layers_to_run = [args.layer_id]
+    
     try:
-        result = client.run_layer(args.doc_id, args.layer_id, force=args.force)
-        icon = "✓" if result["success"] else "✗"
-        print(f"{icon} {result['layer_id']}: {result['message']}")
+        for layer_id in layers_to_run:
+            result = client.run_layer(args.doc_id, layer_id, force=args.force)
+            icon = "✓" if result["success"] else "✗"
+            print(f"{icon} {result['layer_id']}: {result['message']}")
     except Exception as e:
         print(f"✗ Error: {e}")
         sys.exit(1)
