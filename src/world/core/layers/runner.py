@@ -1,3 +1,4 @@
+# src/world/core/layers/runner.py
 """
 Layer execution runner.
 
@@ -49,7 +50,7 @@ def run_layer_on_doc(doc_store, doc, layer_id: str, force: bool = False, context
         
         # Run layer
         try:
-            result = layer.process(inputs, self.context)
+            result = layer.process(inputs, context)
             if result.success:
                 doc_store.set_data(doc.id, lid, result.data)
             if lid == layer_id:
