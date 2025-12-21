@@ -1,0 +1,11 @@
+# Entities
+entity jack : person
+entity jill : person
+
+# Facts
+lonely(who: jack)
+exciting(who: jill)
+
+# Rules
+rule [x:person, y:person]: lonely(who: x), exciting(who: y) -> likes(who: x, whom: y)
+rule [x:person, y:person]: likes(who: x, whom: y), likes(who: y, whom: x) -> dates(who: x, whom: y)
