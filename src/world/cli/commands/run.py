@@ -5,6 +5,8 @@ Run commands.
 import sys
 from world.cli import client
 
+FRONTEND_URL = "http://localhost:5173"
+
 
 def add_subparser(subparsers):
     parser = subparsers.add_parser("run", help="Annotation runs")
@@ -15,6 +17,7 @@ def add_subparser(subparsers):
     create_p.add_argument("doc_id", help="Document ID")
     create_p.add_argument("kb_id", help="Knowledge Base ID")
     create_p.add_argument("--from", dest="parent", help="Branch from existing run")
+    create_p.add_argument("--no-process", action="store_true", help="Don't run layers")
     create_p.set_defaults(func=run_create)
     
     # process
@@ -48,11 +51,23 @@ def add_subparser(subparsers):
 def run_create(args):
     try:
         result = client.create_run(args.doc_id, args.kb_id, args.parent)
-        print(f"✓ Created run: {result['id']}")
+        run_id = result['id']
+        print(f"✓ Created run: {run_id}")
         print(f"  doc: {result['doc_id']}")
         print(f"  kb: {result['kb_id']}")
         if result.get('parent_run_id'):
             print(f"  branched from: {result['parent_run_id']}")
+        
+        # Auto-process unless --no-process
+        if not args.no_process:
+            print()
+            proc_result = client.process_run(run_id)
+            for lid, r in proc_result["results"].items():
+                icon = "✓" if r["success"] else "✗"
+                print(f"{icon} {lid}: {r['message']}")
+        
+        print()
+        print(f"→ {FRONTEND_URL}/runs/{run_id}")
     except Exception as e:
         print(f"✗ Error: {e}")
         sys.exit(1)
@@ -66,6 +81,9 @@ def run_process(args):
         for lid, r in result["results"].items():
             icon = "✓" if r["success"] else "✗"
             print(f"{icon} {lid}: {r['message']}")
+        
+        print()
+        print(f"→ {FRONTEND_URL}/runs/{args.run_id}")
     except Exception as e:
         print(f"✗ Error: {e}")
         sys.exit(1)
@@ -86,6 +104,9 @@ def run_show(args):
         for lid, layer in run["layers"].items():
             icon = "✓" if layer["status"] == "done" else "○"
             print(f"  {icon} {lid}")
+        
+        print()
+        print(f"→ {FRONTEND_URL}/runs/{args.run_id}")
     except Exception as e:
         print(f"✗ Error: {e}")
         sys.exit(1)
