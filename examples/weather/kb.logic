@@ -1,0 +1,12 @@
+# Entities
+entity sky : thing
+entity ground : thing
+entity plants : thing
+
+# Facts
+cloudy(what: sky)
+
+# Rules
+rule []: cloudy(what: sky) -> rainy(what: sky)
+rule []: rainy(what: sky) -> wet(what: ground)
+rule []: wet(what: ground) -> happy(what: plants)
