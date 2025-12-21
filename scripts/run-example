@@ -1,3 +1,4 @@
+# scripts/run-example
 #!/bin/bash
 # Usage: ./scripts/run-example socrates
 
@@ -45,9 +46,9 @@ KB_FILE="$DIR/kb.logic"
 if [ -f "$KB_FILE" ]; then
     echo ""
     echo "Loading KB: $KB_FILE"
-    KB_RESULT=$($WORLD kb add "$KB_FILE" --name "$EXAMPLE")
-    echo "$KB_RESULT"
+    $WORLD kb add "$KB_FILE" --name "$EXAMPLE" || true
 fi
 
 echo ""
+echo "=== Result ==="
 $WORLD doc json "$DOC_ID"
