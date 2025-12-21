@@ -1,0 +1,29 @@
+#!/bin/bash
+# scripts/parse
+# Usage: ./scripts/parse "If Socrates is a man then Socrates is mortal."
+
+set -e
+
+WORLD="uv run --project /Users/greg/mono/logic/world python -m world.cli.main"
+
+TEXT="$1"
+
+if [ -z "$TEXT" ]; then
+    echo "Usage: ./scripts/parse \"your sentence here\""
+    exit 1
+fi
+
+# Add doc and capture ID
+RESULT=$($WORLD doc add "$TEXT")
+DOC_ID=$(echo "$RESULT" | grep -oE '[a-f0-9]{12}')
+
+echo "Created: $DOC_ID"
+echo ""
+
+# Run all layers
+$WORLD layer run "$DOC_ID" --all
+
+echo ""
+
+# Show result
+$WORLD doc json "$DOC_ID"
