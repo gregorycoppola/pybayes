@@ -4,6 +4,8 @@
 
 set -e
 
+WORLD="uv run --project /Users/greg/mono/logic/world python -m world.cli.main"
+
 TEXT="$1"
 
 if [ -z "$TEXT" ]; then
@@ -12,16 +14,16 @@ if [ -z "$TEXT" ]; then
 fi
 
 # Add doc and capture ID
-RESULT=$(world doc add "$TEXT")
+RESULT=$($WORLD doc add "$TEXT")
 DOC_ID=$(echo "$RESULT" | grep -oE '[a-f0-9]{12}')
 
 echo "Created: $DOC_ID"
 echo ""
 
 # Run all layers
-world layer run "$DOC_ID" --all
+$WORLD layer run "$DOC_ID" --all
 
 echo ""
 
 # Show result
-world doc json "$DOC_ID"
+$WORLD doc json "$DOC_ID"
