@@ -3,7 +3,9 @@ Layer commands - via API.
 """
 
 import sys
+import json
 from pathlib import Path
+from rich import print_json
 from world.cli import client
 
 
@@ -22,11 +24,17 @@ def add_subparser(subparsers):
     run_p.add_argument("--force", "-f", action="store_true", help="Force re-run")
     run_p.set_defaults(func=layer_run)
     
-    # show
+    # show (DSL)
     show_p = layer_sub.add_parser("show", help="Show layer data as DSL")
     show_p.add_argument("doc_id", help="Document ID")
     show_p.add_argument("layer_id", help="Layer ID")
     show_p.set_defaults(func=layer_show)
+    
+    # json
+    json_p = layer_sub.add_parser("json", help="Show layer data as JSON")
+    json_p.add_argument("doc_id", help="Document ID")
+    json_p.add_argument("layer_id", help="Layer ID")
+    json_p.set_defaults(func=layer_json)
     
     # set
     set_p = layer_sub.add_parser("set", help="Set layer override from file")
@@ -73,6 +81,15 @@ def layer_show(args):
         print(f"# {args.doc_id} / {result['layer_id']}{result['ext']}")
         print()
         print(result["dsl"])
+    except Exception as e:
+        print(f"✗ Error: {e}")
+        sys.exit(1)
+
+
+def layer_json(args):
+    try:
+        result = client.get_layer_data(args.doc_id, args.layer_id)
+        print_json(data=result["data"])
     except Exception as e:
         print(f"✗ Error: {e}")
         sys.exit(1)
