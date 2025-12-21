@@ -1,0 +1,8 @@
+# Entities
+entity socrates : person
+
+# Facts
+man(who: socrates)
+
+# Rules
+rule [x:person]: man(who: x) -> mortal(who: x)
