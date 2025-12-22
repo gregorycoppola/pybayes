@@ -1,4 +1,3 @@
-# src/world/core/factor_graph.py
 """
 Factor Graph for QBBN (Section 6-7).
 """
@@ -8,6 +7,10 @@ import csv
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
+
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
 
 from world.core.horn import HornClause, KnowledgeBase
 from world.core.logical_lang import format_predicate
@@ -180,7 +183,6 @@ class BPTrace:
         if not self.iterations:
             return
         
-        # Get all variable keys
         var_keys = sorted(self.iterations[0]["beliefs"].keys())
         
         with open(path, "w", newline="") as f:
@@ -206,6 +208,99 @@ class BPTrace:
                 row = [it["iteration"]] + [it["factor_messages"].get(k, 0) for k in msg_keys]
                 writer.writerow(row)
     
+    def print_graph(self, graph: "FactorGraph"):
+        """Rich render of factor graph structure."""
+        console = Console()
+        
+        # Variables
+        evidence = [k for k, v in graph.variables.items() if v.is_evidence]
+        latent = [k for k, v in graph.variables.items() if not v.is_evidence]
+        
+        console.print(Panel(
+            f"[green]Evidence:[/green] {', '.join(evidence) or '(none)'}\n"
+            f"[yellow]Latent:[/yellow] {', '.join(latent) or '(none)'}",
+            title="Variables"
+        ))
+        
+        # Factors
+        lines = []
+        for f in graph.factors:
+            if f.factor_type == "implication":
+                lines.append(f"  f{f.factor_id}: {f.var_keys[0]} → {f.var_keys[1]}  [w={f.weight:.2f}]")
+            else:
+                premises = " ∧ ".join(f.var_keys[:-1])
+                lines.append(f"  f{f.factor_id}: {premises} → {f.var_keys[-1]}  [w={f.weight:.2f}]")
+        
+        console.print(Panel("\n".join(lines) if lines else "(no factors)", title="Factors"))
+    
+    def print_beliefs_table(self, max_iterations: int = 10):
+        """Rich table of beliefs over iterations."""
+        if not self.iterations:
+            return
+        
+        console = Console()
+        table = Table(title="Belief Propagation")
+        
+        # Get variable keys (sorted)
+        first_beliefs = self.iterations[0]["beliefs"]
+        var_keys = sorted(first_beliefs.keys())
+        
+        table.add_column("iter", style="dim")
+        for k in var_keys:
+            # Truncate long names
+            display = k if len(k) <= 25 else k[:22] + "..."
+            table.add_column(display, justify="right")
+        
+        # Sample iterations if too many
+        iters_to_show = self.iterations
+        if len(iters_to_show) > max_iterations:
+            step = len(iters_to_show) // max_iterations
+            iters_to_show = self.iterations[::step]
+            if self.iterations[-1] not in iters_to_show:
+                iters_to_show.append(self.iterations[-1])
+        
+        for it in iters_to_show:
+            row = [str(it["iteration"])]
+            for k in var_keys:
+                p = it["beliefs"].get(k, 0)
+                # Color by probability
+                if p > 0.9:
+                    row.append(f"[green]{p:.3f}[/green]")
+                elif p < 0.1:
+                    row.append(f"[red]{p:.3f}[/red]")
+                else:
+                    row.append(f"[yellow]{p:.3f}[/yellow]")
+            table.add_row(*row)
+        
+        console.print(table)
+    
+    def print_convergence_spark(self):
+        """Sparkline of max belief change per iteration."""
+        if len(self.iterations) < 2:
+            return
+        
+        console = Console()
+        sparks = "▁▂▃▄▅▆▇█"
+        
+        # Compute max change per iteration
+        changes = []
+        for i in range(1, len(self.iterations)):
+            prev = self.iterations[i-1]["beliefs"]
+            curr = self.iterations[i]["beliefs"]
+            max_delta = max(abs(curr.get(k, 0) - prev.get(k, 0)) for k in curr)
+            changes.append(max_delta)
+        
+        if not changes:
+            return
+        
+        max_change = max(changes) if max(changes) > 0 else 1
+        spark_line = ""
+        for c in changes:
+            idx = min(int(c / max_change * 7), 7)
+            spark_line += sparks[idx]
+        
+        console.print(f"[dim]Convergence:[/dim] {spark_line} [dim](max Δ={max_change:.4f})[/dim]")
+    
     def print_summary(self):
         """Print convergence summary."""
         if len(self.iterations) < 2:
@@ -214,13 +309,26 @@ class BPTrace:
         first = self.iterations[0]["beliefs"]
         last = self.iterations[-1]["beliefs"]
         
-        print(f"\nConvergence over {len(self.iterations)} iterations:")
+        console = Console()
+        console.print(f"\n[bold]Converged in {len(self.iterations)} iterations:[/bold]")
         for key in sorted(first.keys()):
             start = first[key]
             end = last[key]
             delta = end - start
-            arrow = "↑" if delta > 0.01 else "↓" if delta < -0.01 else "→"
-            print(f"  {key}: {start:.3f} {arrow} {end:.3f} (Δ={delta:+.3f})")
+            if delta > 0.01:
+                arrow = "[green]↑[/green]"
+            elif delta < -0.01:
+                arrow = "[red]↓[/red]"
+            else:
+                arrow = "[dim]→[/dim]"
+            console.print(f"  {key}: {start:.3f} {arrow} {end:.3f} (Δ={delta:+.3f})")
+    
+    def to_dict(self) -> dict:
+        """Export full trace as JSON-serializable dict."""
+        return {
+            "iterations": self.iterations,
+            "n_iterations": len(self.iterations),
+        }
 
 
 def belief_propagation(graph: FactorGraph, iterations: int = 20, damping: float = 0.5, 

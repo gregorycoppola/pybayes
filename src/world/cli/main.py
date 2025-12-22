@@ -1,9 +1,8 @@
 """
 QBBN CLI.
 """
-
 import argparse
-from world.cli.commands import doc, kb, run, layer
+from world.cli.commands import doc, kb, run, layer, infer
 
 
 def main():
@@ -14,6 +13,7 @@ def main():
     kb.add_subparser(subparsers)
     run.add_subparser(subparsers)
     layer.add_subparser(subparsers)
+    infer.add_subparser(subparsers)
     
     args = parser.parse_args()
     
