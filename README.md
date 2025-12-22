@@ -6,6 +6,10 @@ Parses natural language into logical forms, grounds them against knowledge bases
 
 **By Super Sonic Vibes ✈️🪩✨**
 
+📖 **[Full documentation and theory →](https://github.com/gregorycoppola/world-docs)**
+
+---
+
 ## What is this?
 
 An implementation of the **Quantified Boolean Bayesian Network (QBBN)** — a unified model for logical and probabilistic reasoning. Based on the paper:
