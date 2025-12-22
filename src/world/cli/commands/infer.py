@@ -1,32 +1,33 @@
 """Inference commands."""
 
-import typer
 from rich.console import Console
 
-app = typer.Typer(help="Run belief propagation inference")
 console = Console()
 
 
-@app.callback(invoke_without_command=True)
-def infer(
-    ctx: typer.Context,
-    kb_path: str = typer.Argument(..., help="Path to .logic file"),
-    iterations: int = typer.Option(20, "--iterations", "-n", help="Max BP iterations"),
-    damping: float = typer.Option(0.5, "--damping", "-d", help="Damping factor"),
-    graph: bool = typer.Option(False, "--graph", "-g", help="Show factor graph structure"),
-    table: bool = typer.Option(True, "--table/--no-table", "-t", help="Show belief table"),
-    spark: bool = typer.Option(True, "--spark/--no-spark", "-s", help="Show convergence sparkline"),
-    summary: bool = typer.Option(False, "--summary", help="Show convergence summary"),
-    query_prop: str = typer.Option(None, "--query", "-q", help="Query specific proposition"),
-    csv_out: str = typer.Option(None, "--csv", help="Write beliefs to CSV"),
-):
-    """Run belief propagation on a knowledge base."""
+def add_subparser(subparsers):
+    parser = subparsers.add_parser("infer", help="Run belief propagation inference")
+    parser.add_argument("kb_path", help="Path to .logic file")
+    parser.add_argument("-n", "--iterations", type=int, default=20, help="Max BP iterations")
+    parser.add_argument("-d", "--damping", type=float, default=0.5, help="Damping factor")
+    parser.add_argument("-g", "--graph", action="store_true", help="Show factor graph structure")
+    parser.add_argument("-t", "--table", action="store_true", default=True, help="Show belief table")
+    parser.add_argument("--no-table", action="store_false", dest="table", help="Hide belief table")
+    parser.add_argument("-s", "--spark", action="store_true", default=True, help="Show convergence sparkline")
+    parser.add_argument("--no-spark", action="store_false", dest="spark", help="Hide sparkline")
+    parser.add_argument("--summary", action="store_true", help="Show convergence summary")
+    parser.add_argument("-q", "--query", dest="query_prop", help="Query specific proposition")
+    parser.add_argument("--csv", dest="csv_out", help="Write beliefs to CSV")
+    parser.set_defaults(func=run_infer)
+
+
+def run_infer(args):
     from world.core.horn import KnowledgeBase
     from world.core.factor_graph import FactorGraph, belief_propagation, BPTrace, query
     
     # Load KB
-    kb = KnowledgeBase.from_file(kb_path)
-    console.print(f"[dim]Loaded {len(kb.clauses)} clauses from {kb_path}[/dim]")
+    kb = KnowledgeBase.from_file(args.kb_path)
+    console.print(f"[dim]Loaded {len(kb.clauses)} clauses from {args.kb_path}[/dim]")
     
     # Build factor graph
     fg = FactorGraph.from_knowledge_base(kb)
@@ -35,30 +36,30 @@ def infer(
     
     # Run BP
     trace = BPTrace()
-    belief_propagation(fg, iterations=iterations, damping=damping, trace=trace)
+    belief_propagation(fg, iterations=args.iterations, damping=args.damping, trace=trace)
     console.print(f"[dim]Ran {len(trace.iterations)} iterations[/dim]\n")
     
     # Display
-    if graph:
+    if args.graph:
         trace.print_graph(fg)
         console.print()
     
-    if table:
+    if args.table:
         trace.print_beliefs_table()
         console.print()
     
-    if spark:
+    if args.spark:
         trace.print_convergence_spark()
         console.print()
     
-    if summary:
+    if args.summary:
         trace.print_summary()
         console.print()
     
-    if query_prop:
-        p = query(fg, query_prop)
-        console.print(f"[bold]P({query_prop}) = {p:.4f}[/bold]")
+    if args.query_prop:
+        p = query(fg, args.query_prop)
+        console.print(f"[bold]P({args.query_prop}) = {p:.4f}[/bold]")
     
-    if csv_out:
-        trace.to_csv(csv_out)
-        console.print(f"[dim]Wrote {csv_out}[/dim]")
+    if args.csv_out:
+        trace.to_csv(args.csv_out)
+        console.print(f"[dim]Wrote {args.csv_out}[/dim]")
