@@ -1,5 +1,6 @@
 """Inference commands."""
 
+from pathlib import Path
 from rich.console import Console
 
 console = Console()
@@ -22,11 +23,20 @@ def add_subparser(subparsers):
 
 
 def run_infer(args):
+    from world.core.logical_lang import parse_logical
     from world.core.horn import KnowledgeBase
     from world.core.factor_graph import FactorGraph, belief_propagation, BPTrace, query
     
-    # Load KB
-    kb = KnowledgeBase.from_file(args.kb_path)
+    # Load and parse DSL
+    path = Path(args.kb_path)
+    if not path.exists():
+        console.print(f"[red]✗ File not found: {args.kb_path}[/red]")
+        return
+    
+    text = path.read_text()
+    doc = parse_logical(text)
+    kb = KnowledgeBase.from_logical_document(doc)
+    
     console.print(f"[dim]Loaded {len(kb.clauses)} clauses from {args.kb_path}[/dim]")
     
     # Build factor graph
