@@ -6,7 +6,7 @@ Parses natural language into logical forms, grounds them against knowledge bases
 
 **By Super Sonic Vibes ✈️🪩✨**
 
-📖 **[Full documentation and theory →](https://github.com/gregorycoppola/world-docs)**
+📖 See **[here →](https://github.com/gregorycoppola/world-docs)** for theoretical notes on the *logical random field*, topics in *discrete* syntactic and semantic annotation pipelines, and all other theoretical topics pertaining to this implementation. The following notes are only on usage of the library.
 
 ---
 
